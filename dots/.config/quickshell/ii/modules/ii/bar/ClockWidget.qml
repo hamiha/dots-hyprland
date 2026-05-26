@@ -48,14 +48,15 @@ Item {
 
         onPressed: event => {
             if (event.button === Qt.LeftButton) {
-                GlobalStates.clockWidgetOpen = !GlobalStates.clockWidgetOpen
+                calendarLoader.active = !calendarLoader.active
             }
         }
     }
 
     Loader {
         id: calendarLoader
-        active: GlobalStates.clockWidgetOpen
+        active: false
+        onActiveChanged: GlobalStates.clockWidgetOpen = active
         sourceComponent: ClockCalendarPanel {
             anchor {
                 window: root.QsWindow.window
@@ -67,6 +68,7 @@ Item {
                     ? (Config.options.bar.bottom ? Edges.Left : Edges.Right)
                     : (Config.options.bar.bottom ? Edges.Top : Edges.Bottom)
             }
+            onDismissed: calendarLoader.active = false
         }
     }
 }

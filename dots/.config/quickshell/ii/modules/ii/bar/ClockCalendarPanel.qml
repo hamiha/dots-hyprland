@@ -10,6 +10,8 @@ import Quickshell
 PopupWindow {
     id: root
 
+    signal dismissed()
+
     visible: true
     color: "transparent"
 
@@ -27,7 +29,7 @@ PopupWindow {
         target: GlobalFocusGrab
 
         function onDismissed() {
-            GlobalStates.clockWidgetOpen = false
+            root.dismissed()
         }
     }
 
