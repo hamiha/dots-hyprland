@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO="$HOME/Desktop/dots-hyprland"
+LIVE="$HOME/.config/quickshell"
+REPO_QS="$REPO/dots/.config/quickshell"
+BRANCH="my-quickshell"
+
+echo "== Quickshell init sync =="
+
+if [ ! -d "$REPO/.git" ]; then
+  echo "ERROR: repo not found or not a Git repo:"
+  echo "$REPO"
+  exit 1
+fi
+
+if [ ! -d "$LIVE" ]; then
+  echo "ERROR: live quickshell config not found:"
+  echo "$LIVE"
+  exit 1
+fi
+
+mkdir -p "$REPO_QS"
+
+cd "$REPO"
+
+echo "Checking branch..."
+if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+  git checkout "$BRANCH"
+else
+  git checkout -b "$BRANCH"
+fi
+
+echo "Syncing live config into repo..."
+rsync -a --delete \
+  --exclude='.git' \
+  --exclude='.gitmodules' \
+  "$LIVE/" \
+  "$REPO_QS/"
+
+echo "Removing nested Git metadata from copied config..."
+find "$REPO_QS" -name .git -type d -prune -exec rm -rf {} +
+find "$REPO_QS" -name .git -type f -delete
+find "$REPO_QS" -name .gitmodules -type f -delete
+
+echo "Git status:"
+git status --short dots/.config/quickshell
+
+if git diff --quiet -- dots/.config/quickshell && git diff --cached --quiet -- dots/.config/quickshell; then
+  echo "No changes to commit."
+  exit 0
+fi
+
+git add dots/.config/quickshell
+
+echo "Committing..."
+git commit -m "sync quickshell config"
+
+echo "Pushing..."
+git push -u origin "$BRANCH"
+
+echo "Done. Live config synced into fork."
