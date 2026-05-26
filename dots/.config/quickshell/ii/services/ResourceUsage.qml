@@ -7,19 +7,23 @@ import Quickshell
 import Quickshell.Io
 
 /**
- * Simple polled resource usage service with RAM, Swap, and CPU usage.
+ * Simple polled resource usage service with RAM, Swap, CPU usage, and CPU temp.
  */
 Singleton {
     id: root
-	property real memoryTotal: 1
-	property real memoryFree: 0
-	property real memoryUsed: memoryTotal - memoryFree
+
+    property real memoryTotal: 1
+    property real memoryFree: 0
+    property real memoryUsed: memoryTotal - memoryFree
     property real memoryUsedPercentage: memoryUsed / memoryTotal
+
     property real swapTotal: 1
-	property real swapFree: 0
-	property real swapUsed: swapTotal - swapFree
+    property real swapFree: 0
+    property real swapUsed: swapTotal - swapFree
     property real swapUsedPercentage: swapTotal > 0 ? (swapUsed / swapTotal) : 0
+
     property real cpuUsage: 0
+    property real cpuTemp: 0
     property var previousCpuStats
 
     property string maxAvailableMemoryString: kbToGbString(ResourceUsage.memoryTotal)
@@ -27,6 +31,7 @@ Singleton {
     property string maxAvailableCpuString: "--"
 
     readonly property int historyLength: Config?.options.resources.historyLength ?? 60
+
     property list<real> cpuUsageHistory: []
     property list<real> memoryUsageHistory: []
     property list<real> swapUsageHistory: []
@@ -41,77 +46,123 @@ Singleton {
             memoryUsageHistory.shift()
         }
     }
+
     function updateSwapUsageHistory() {
         swapUsageHistory = [...swapUsageHistory, swapUsedPercentage]
         if (swapUsageHistory.length > historyLength) {
             swapUsageHistory.shift()
         }
     }
+
     function updateCpuUsageHistory() {
         cpuUsageHistory = [...cpuUsageHistory, cpuUsage]
         if (cpuUsageHistory.length > historyLength) {
             cpuUsageHistory.shift()
         }
     }
+
     function updateHistories() {
         updateMemoryUsageHistory()
         updateSwapUsageHistory()
         updateCpuUsageHistory()
     }
 
-	Timer {
-		interval: 1
-        running: true 
+    Timer {
+        interval: 1
+        running: true
         repeat: true
-		onTriggered: {
+
+        onTriggered: {
             // Reload files
             fileMeminfo.reload()
             fileStat.reload()
+            fileCpuTemp.reload()
 
             // Parse memory and swap usage
             const textMeminfo = fileMeminfo.text()
+
             memoryTotal = Number(textMeminfo.match(/MemTotal: *(\d+)/)?.[1] ?? 1)
             memoryFree = Number(textMeminfo.match(/MemAvailable: *(\d+)/)?.[1] ?? 0)
+
             swapTotal = Number(textMeminfo.match(/SwapTotal: *(\d+)/)?.[1] ?? 1)
             swapFree = Number(textMeminfo.match(/SwapFree: *(\d+)/)?.[1] ?? 0)
 
             // Parse CPU usage
             const textStat = fileStat.text()
-            const cpuLine = textStat.match(/^cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/)
+
+            const cpuLine = textStat.match(
+                /^cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/
+            )
+
             if (cpuLine) {
                 const stats = cpuLine.slice(1).map(Number)
+
                 const total = stats.reduce((a, b) => a + b, 0)
                 const idle = stats[3]
 
                 if (previousCpuStats) {
                     const totalDiff = total - previousCpuStats.total
                     const idleDiff = idle - previousCpuStats.idle
-                    cpuUsage = totalDiff > 0 ? (1 - idleDiff / totalDiff) : 0
+
+                    cpuUsage = totalDiff > 0
+                        ? (1 - idleDiff / totalDiff)
+                        : 0
                 }
 
                 previousCpuStats = { total, idle }
             }
 
+            // Parse CPU temperature
+            const rawCpuTemp = Number(fileCpuTemp.text().trim() || 0)
+
+            cpuTemp = rawCpuTemp > 1000
+                ? rawCpuTemp / 1000
+                : rawCpuTemp
+
             root.updateHistories()
+
             interval = Config.options?.resources?.updateInterval ?? 3000
         }
-	}
+    }
 
-	FileView { id: fileMeminfo; path: "/proc/meminfo" }
-    FileView { id: fileStat; path: "/proc/stat" }
+    FileView {
+        id: fileMeminfo
+        path: "/proc/meminfo"
+    }
+
+    FileView {
+        id: fileStat
+        path: "/proc/stat"
+    }
+
+    FileView {
+        id: fileCpuTemp
+        path: "/sys/class/thermal/thermal_zone0/temp"
+    }
 
     Process {
         id: findCpuMaxFreqProc
+
         environment: ({
             LANG: "C",
             LC_ALL: "C"
         })
-        command: ["bash", "-c", "lscpu | grep 'CPU max MHz' | awk '{print $4}'"]
+
+        command: [
+            "bash",
+            "-c",
+            "lscpu | grep 'CPU max MHz' | awk '{print $4}'"
+        ]
+
         running: true
+
         stdout: StdioCollector {
             id: outputCollector
+
             onStreamFinished: {
-                root.maxAvailableCpuString = (parseFloat(outputCollector.text) / 1000).toFixed(0) + " GHz"
+                root.maxAvailableCpuString =
+                    (parseFloat(outputCollector.text) / 1000).toFixed(0)
+                    + " GHz"
             }
         }
     }

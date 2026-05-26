@@ -1,6 +1,8 @@
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.services
+import qs.modules.ii.sidebarRight
+import qs.modules.ii.sidebarRight.calendar
 import QtQuick
 import QtQuick.Layouts
 
@@ -10,6 +12,7 @@ StyledPopup {
     property string formattedTime: DateTime.time
     property string formattedUptime: DateTime.uptime
     property string todosSection: getUpcomingTodos()
+    signal dismissRequested()
 
     function getUpcomingTodos() {
         const unfinishedTodos = Todo.list.filter(function (item) {
@@ -35,36 +38,24 @@ StyledPopup {
     ColumnLayout {
         id: columnLayout
         anchors.centerIn: parent
-        spacing: 4
+        spacing: 8
 
         StyledPopupHeaderRow {
             icon: "calendar_month"
             label: root.formattedDate
         }
 
+        BottomWidgetGroup {
+            collapsed: false
+            selectedTab: 0
+            implicitWidth: 420
+            implicitHeight: 350
+        }
+
         StyledPopupValueRow {
             icon: "timelapse"
             label: Translation.tr("System uptime:")
             value: root.formattedUptime
-        }
-
-        // Tasks
-        Column {
-            spacing: 0
-            Layout.fillWidth: true
-
-            StyledPopupValueRow {
-                icon: "checklist"
-                label: Translation.tr("To Do:")
-                value: ""
-            }
-
-            StyledText {
-                horizontalAlignment: Text.AlignLeft
-                wrapMode: Text.Wrap
-                color: Appearance.colors.colOnSurfaceVariant
-                text: root.todosSection
-            }
         }
     }
 }
