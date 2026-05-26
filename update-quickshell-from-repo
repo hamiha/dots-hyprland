@@ -37,8 +37,4 @@ rsync -a --delete \
   "$REPO_QS/" \
   "$LIVE/"
 
-echo "Restarting quickshell..."
-pkill quickshell || true
-nohup quickshell >/tmp/quickshell-restart.log 2>&1 &
-
 echo "Done. Live Quickshell updated from repo."

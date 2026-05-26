@@ -51,12 +51,4 @@ if git diff --quiet -- dots/.config/quickshell && git diff --cached --quiet -- d
   exit 0
 fi
 
-git add dots/.config/quickshell
-
-echo "Committing..."
-git commit -m "sync quickshell config"
-
-echo "Pushing..."
-git push -u origin "$BRANCH"
-
-echo "Done. Live config synced into fork."
+echo "Done. Live config synced into fork. Go check the changes yourself"
