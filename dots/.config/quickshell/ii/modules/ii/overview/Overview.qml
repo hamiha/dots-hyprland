@@ -25,7 +25,14 @@ Scope {
         readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
         property bool monitorIsFocused: Hyprland.focusedMonitor?.id == monitor?.id
 
-        visible: GlobalStates.overviewOpen
+        property bool exitAnimating: false
+        Timer {
+            id: exitAnimTimer
+            interval: 130 // slightly longer than slideOut duration (100)
+            onTriggered: panelWindow.exitAnimating = false
+        }
+
+        visible: GlobalStates.overviewOpen || panelWindow.exitAnimating
 
         WlrLayershell.namespace: "quickshell:overview"
         WlrLayershell.layer: WlrLayer.Overlay
@@ -36,7 +43,7 @@ Scope {
         color: "transparent"
 
         mask: Region {
-            item: GlobalStates.overviewOpen ? contentItem : null
+            item: (GlobalStates.overviewOpen || panelWindow.exitAnimating) ? contentItem : null
         }
 
         anchors {
@@ -46,18 +53,22 @@ Scope {
             right: true
         }
 
-        implicitWidth: columnLayout.implicitWidth
-        implicitHeight: columnLayout.implicitHeight
+        implicitWidth: contentItem.implicitWidth
+        implicitHeight: contentItem.implicitHeight
 
         Connections {
             target: GlobalStates
 
             function onOverviewOpenChanged() {
                 if (!GlobalStates.overviewOpen) {
+                    panelWindow.exitAnimating = true
+                    exitAnimTimer.restart()
                     searchWidget.disableExpandAnimation()
                     overviewScope.dontAutoCancelSearch = false
                     GlobalFocusGrab.dismiss()
                 } else {
+                    panelWindow.exitAnimating = false
+                    exitAnimTimer.stop()
                     if (!overviewScope.dontAutoCancelSearch) {
                         searchWidget.cancelSearch()
                     }
@@ -159,7 +170,7 @@ Scope {
                         target: searchWidgetWrapper
                         property: "slideY"
 
-                        duration: 480
+                        duration: 200
 
                         easing.type: Easing.BezierSpline
                         easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
@@ -171,7 +182,7 @@ Scope {
                         target: searchWidgetWrapper
                         property: "slideOpacity"
 
-                        duration: 480
+                        duration: 200
 
                         easing.type: Easing.BezierSpline
                         easing.bezierCurve: Appearance.animationCurves.emphasizedDecel
@@ -187,7 +198,7 @@ Scope {
                         target: searchWidgetWrapper
                         property: "slideY"
 
-                        duration: 200
+                        duration: 100
 
                         easing.type: Easing.BezierSpline
                         easing.bezierCurve: Appearance.animationCurves.emphasizedAccel
@@ -199,7 +210,7 @@ Scope {
                         target: searchWidgetWrapper
                         property: "slideOpacity"
 
-                        duration: 200
+                        duration: 100
 
                         easing.type: Easing.BezierSpline
                         easing.bezierCurve: Appearance.animationCurves.emphasizedAccel
