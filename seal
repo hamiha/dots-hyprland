@@ -4,12 +4,12 @@ set -euo pipefail
 REPO="$HOME/Desktop/dots-hyprland"
 LIVE="$HOME/.config/quickshell"
 REPO_QS="$REPO/dots/.config/quickshell"
-BRANCH="my-quickshell"
+BRANCH="runeforge"
 
-echo "== Quickshell init sync =="
+echo "== Seal ritual initiated =="
 
 if [ ! -d "$REPO/.git" ]; then
-  echo "ERROR: repo not found or not a Git repo:"
+  echo "ERROR: The archive could not be found:"
   echo "$REPO"
   exit 1
 fi
@@ -24,31 +24,31 @@ mkdir -p "$REPO_QS"
 
 cd "$REPO"
 
-echo "Checking branch..."
+echo "Inspecting active branch..."
 if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
   git checkout "$BRANCH"
 else
   git checkout -b "$BRANCH"
 fi
 
-echo "Syncing live config into repo..."
+echo "Inscribing live shell state into repository..."
 rsync -a --delete \
   --exclude='.git' \
   --exclude='.gitmodules' \
   "$LIVE/" \
   "$REPO_QS/"
 
-echo "Removing nested Git metadata from copied config..."
+echo "Purging foreign Git relics..."
 find "$REPO_QS" -name .git -type d -prune -exec rm -rf {} +
 find "$REPO_QS" -name .git -type f -delete
 find "$REPO_QS" -name .gitmodules -type f -delete
 
-echo "Git status:"
+echo "Current archive changes:"
 git status --short dots/.config/quickshell
 
 if git diff --quiet -- dots/.config/quickshell && git diff --cached --quiet -- dots/.config/quickshell; then
-  echo "No changes to commit."
+  echo "The seal remains unchanged."
   exit 0
 fi
 
-echo "Done. Live config synced into fork. Go check the changes yourself"
+echo "Seal complete. The current shell state has been preserved."

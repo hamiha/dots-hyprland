@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BACKUP_ROOT="$HOME/.config"
+KEEP=5
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+RST='\033[0m'
+
+log() { printf "${GREEN}==>${RST} ${BOLD}%s${RST}\n" "$*"; }
+warn() { printf "${RED}==>${RST} ${BOLD}%s${RST}\n" "$*"; }
+info() { printf "${CYAN}  ->${RST} %s\n" "$*"; }
+
+log "Beginning purge ritual..."
+
+mapfile -t backups < <(
+    find "$BACKUP_ROOT" \
+        -maxdepth 1 \
+        -type d \
+        -name 'quickshell.backup.*' \
+        | sort -r
+)
+
+count="${#backups[@]}"
+
+if (( count <= KEEP )); then
+    info "Only $count backup relic(s) found. Nothing to purge."
+    exit 0
+fi
+
+log "Preserving newest $KEEP relics..."
+echo ""
+
+for backup in "${backups[@]:KEEP}"; do
+    warn "Banishing: $backup"
+    rm -rf "$backup"
+done
+
+echo ""
+log "Purge complete."

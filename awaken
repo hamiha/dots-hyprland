@@ -5,36 +5,36 @@ REPO="$HOME/Desktop/dots-hyprland"
 REPO_QS="$REPO/dots/.config/quickshell"
 LIVE="$HOME/.config/quickshell"
 BACKUP="$HOME/.config/quickshell.backup.$(date +%F-%H%M%S)"
-BRANCH="my-quickshell"
+BRANCH="runeforge"
 
-echo "== Update live Quickshell from repo =="
+echo "== Awakening archived shell state =="
 
 if [ ! -d "$REPO/.git" ]; then
-  echo "ERROR: repo not found or not a Git repo:"
+  echo "ERROR: The archive could not be found:"
   echo "$REPO"
   exit 1
 fi
 
 if [ ! -d "$REPO_QS" ]; then
-  echo "ERROR: repo quickshell config not found:"
+  echo "ERROR: No sealed Quickshell state was found:"
   echo "$REPO_QS"
   exit 1
 fi
 
 cd "$REPO"
 
-echo "Switching to branch: $BRANCH"
+echo "Channeling branch: $BRANCH"
 git checkout "$BRANCH"
 
-echo "Backing up current live config to:"
+echo "Preserving current shell state at:"
 echo "$BACKUP"
 cp -a "$LIVE" "$BACKUP"
 
-echo "Syncing repo config into live config..."
+echo "Awakening sealed shell state into the live environment..."
 rsync -a --delete \
   --exclude='.git' \
   --exclude='.gitmodules' \
   "$REPO_QS/" \
   "$LIVE/"
 
-echo "Done. Live Quickshell updated from repo."
+echo "Awakening complete. The live shell now reflects the sealed state."
