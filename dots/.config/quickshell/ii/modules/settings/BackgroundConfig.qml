@@ -50,6 +50,41 @@ ContentPage {
                 Config.options.background.parallax.workspaceZoom = value / 100;
             }
         }
+        ConfigSwitch {
+            buttonIcon: "zoom_in_map"
+            text: Translation.tr("Zoom animation when overview/cheatsheet is open")
+            checked: Config.options.background.zoomOutEnabled
+            onCheckedChanged: {
+                Config.options.background.zoomOutEnabled = checked;
+            }
+        }
+        ContentSubsection {
+            visible: Config.options.background.zoomOutEnabled
+            title: Translation.tr("Zoom background style")
+            ConfigSelectionArray {
+                currentValue: Config.options.background.zoomOutStyle
+                onSelected: newValue => {
+                    Config.options.background.zoomOutStyle = newValue;
+                }
+                options: [
+                    {
+                        displayName: Translation.tr("Gnome Like"),
+                        icon: "blur_on",
+                        value: 0
+                    },
+                    {
+                        displayName: Translation.tr("Default"),
+                        icon: "grid_view",
+                        value: 1
+                    },
+                    {
+                        displayName: Translation.tr("Zoom In"),
+                        icon: "zoom_in",
+                        value: 2
+                    }
+                ]
+            }
+        }
     }
 
     ContentSection {

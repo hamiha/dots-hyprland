@@ -213,6 +213,10 @@ Singleton {
                 property string wallpaperPath: ""
                 property string thumbnailPath: ""
                 property bool hideWhenFullscreen: true
+                property bool zoomOutEnabled: true
+                property bool workspaceBlur: true
+                property int zoomOutStyle: 0 // 0: Blurred Backing | 1: Mirrored Plane
+                property bool animateWallpaperChanges: true
                 property JsonObject parallax: JsonObject {
                     property bool vertical: false
                     property bool autoVertical: false
@@ -422,6 +426,7 @@ Singleton {
 
             property JsonObject overview: JsonObject {
                 property bool enable: true
+                property bool showOpeningAnimation: true
                 property real scale: 0.18 // Relative to screen size
                 property real rows: 2
                 property real columns: 5
