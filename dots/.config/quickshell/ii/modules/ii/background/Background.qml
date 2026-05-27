@@ -7,11 +7,7 @@ import qs.modules.common.widgets
 import qs.modules.common.widgets.widgetCanvas
 import qs.modules.common.functions as CF
 import QtQuick
-import QtQuick.Layouts
-import QtQuick.Effects
-import Qt5Compat.GraphicalEffects
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 
@@ -31,19 +27,12 @@ Scope {
 
             required property var modelData
 
-            // Hide when fullscreen
             property list<HyprlandWorkspace> workspacesForMonitor: Hyprland.workspaces.values.filter(workspace => workspace.monitor && workspace.monitor.name == monitor.name)
             property var activeWorkspaceWithFullscreen: workspacesForMonitor.filter(workspace => ((workspace.toplevels.values.filter(window => window.wayland?.fullscreen)[0] != undefined) && workspace.active))[0]
             visible: GlobalStates.screenLocked || (!(activeWorkspaceWithFullscreen != undefined)) || !Config?.options.background.hideWhenFullscreen
 
-            // Workspaces
             property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
-            property list<var> relevantWindows: HyprlandData.windowList.filter(win => win.monitor == monitor?.id && win.workspace.id >= 0).sort((a, b) => a.workspace.id - b.workspace.id)
-            property int firstWorkspaceId: relevantWindows[0]?.workspace.id || 1
-            property int lastWorkspaceId: relevantWindows[relevantWindows.length - 1]?.workspace.id || 10
-            property int workspaceChunkSize: Config?.options.bar.workspaces.shown ?? 10
-            property int totalWorkspaces: Math.ceil(lastWorkspaceId / workspaceChunkSize) * workspaceChunkSize
-            // Wallpaper
+
             property bool wallpaperIsVideo: Config.options.background.wallpaperPath.endsWith(".mp4") || Config.options.background.wallpaperPath.endsWith(".webm") || Config.options.background.wallpaperPath.endsWith(".mkv") || Config.options.background.wallpaperPath.endsWith(".avi") || Config.options.background.wallpaperPath.endsWith(".mov")
             property string wallpaperPath: wallpaperIsVideo ? Config.options.background.thumbnailPath : Config.options.background.wallpaperPath
             property bool wallpaperSafetyTriggered: {
@@ -52,34 +41,10 @@ Scope {
                 const sensitiveNetwork = (CF.StringUtils.stringListContainsSubstring(Network.networkName.toLowerCase(), Config.options.workSafety.triggerCondition.networkNameKeywords));
                 return enabled && sensitiveWallpaper && sensitiveNetwork;
             }
-            readonly property real parallaxRation: Config.options.background.parallax.workspaceZoom
-            property real minSuitableScale: 1 // Some reasonable init, to be updated
-            property real effectiveWallpaperScale: minSuitableScale * parallaxRation
-            property int wallpaperWidth: modelData.width // Some reasonable init value, to be updated
-            property int wallpaperHeight: modelData.height // Some reasonable init value, to be updated
-            property real scaledWallpaperWidth: wallpaperWidth * effectiveWallpaperScale
-            property real scaledWallpaperHeight: wallpaperHeight * effectiveWallpaperScale
-            property real parallaxTotalPixelsX: Math.max(0, scaledWallpaperWidth - screen.width)
-            property real parallaxTotalPixelsY: Math.max(0, scaledWallpaperHeight - screen.height)
-            readonly property bool verticalParallax: (Config.options.background.parallax.autoVertical && wallpaperHeight > wallpaperWidth) || Config.options.background.parallax.vertical
-            // Colors
-            property bool shouldBlur: (GlobalStates.screenLocked && Config.options.lock.blur.enable)
-            property color dominantColor: Appearance.colors.colPrimary // Default, to be changed
-            property bool dominantColorIsDark: dominantColor.hslLightness < 0.5
-            property color colText: {
-                if (wallpaperSafetyTriggered)
-                    return CF.ColorUtils.mix(Appearance.colors.colOnLayer0, Appearance.colors.colPrimary, 0.75);
-                return (GlobalStates.screenLocked && shouldBlur) ? Appearance.colors.colOnLayer0 : CF.ColorUtils.colorWithLightness(Appearance.colors.colPrimary, (dominantColorIsDark ? 0.8 : 0.12));
-            }
-            Behavior on colText {
-                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-            }
 
-            // Layer props
             screen: modelData
             exclusionMode: ExclusionMode.Ignore
-            WlrLayershell.layer: (GlobalStates.screenLocked && !scaleAnim.running) ? WlrLayer.Overlay : WlrLayer.Bottom
-            // WlrLayershell.layer: WlrLayer.Bottom
+            WlrLayershell.layer: WlrLayer.Bottom
             WlrLayershell.namespace: "quickshell:background"
             anchors {
                 top: true
@@ -96,303 +61,47 @@ Scope {
                 animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
             }
 
-            onWallpaperPathChanged: {
-                bgRoot.updateZoomScale();
-                // Clock position gets updated after zoom scale is updated
-            }
+            WidgetCanvas {
+                id: widgetCanvas
+                width: parent.width
+                height: parent.height
 
-            // Wallpaper zoom scale
-            function updateZoomScale() {
-                getWallpaperSizeProc.path = bgRoot.wallpaperPath;
-                getWallpaperSizeProc.running = true;
-            }
-            Process {
-                id: getWallpaperSizeProc
-                property string path: bgRoot.wallpaperPath
-                command: ["magick", "identify", "-format", "%w %h", path]
-                stdout: StdioCollector {
-                    id: wallpaperSizeOutputCollector
-                    onStreamFinished: {
-                        const output = wallpaperSizeOutputCollector.text;
-                        const [width, height] = output.split(" ").map(Number);
-                        const [screenWidth, screenHeight] = [bgRoot.screen.width, bgRoot.screen.height];
-                        bgRoot.wallpaperWidth = width;
-                        bgRoot.wallpaperHeight = height;
-
-                        bgRoot.minSuitableScale = Math.max(screenWidth / width, screenHeight / height);
+                transitions: Transition {
+                    PropertyAnimation {
+                        properties: "width,height"
+                        duration: Appearance.animation.elementMove.duration
+                        easing.type: Appearance.animation.elementMove.type
+                        easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
                     }
-                }
-            }
-
-            Item {
-                id: wallpaperItem
-                anchors.fill: parent
-                clip: true
-
-                // ========== ZOOM-OUT STATE ==========
-                // Triggers when overview or cheatsheet opens (gated by config toggle)
-                readonly property bool wallpaperZoomedOut: Config.options.background.zoomOutEnabled && (GlobalStates.cheatsheetOpen || GlobalStates.overviewOpen)
-
-                // Animated clip radius for rounded corners during zoom-out (only style 0)
-                property real wallpaperClipRadius: (wallpaperZoomedOut && Config.options.background.zoomOutStyle === 0) ? Appearance.rounding.windowRounding : 0
-                Behavior on wallpaperClipRadius {
-                    NumberAnimation { duration: 375; easing.type: Easing.OutCubic }
-                }
-
-                // ========== BLURRED BACKING (Style 0) ==========
-                // Full-screen blurred copy of wallpaper shown behind the zoomed-out central wallpaper
-                StyledImage {
-                    id: bgWallpaperBlurred
-                    anchors.fill: parent
-                    source: ((wallpaperItem.wallpaperZoomedOut || wallpaperItem.wallpaperClipRadius > 0) && !bgRoot.wallpaperSafetyTriggered) ? bgRoot.wallpaperPath : ""
-                    fillMode: Image.PreserveAspectCrop
-                    visible: Config.options.background.zoomOutStyle === 0 && (wallpaperItem.wallpaperZoomedOut || wallpaperItem.wallpaperClipRadius > 0) && !bgRoot.wallpaperIsVideo
-                    layer.enabled: visible
-                    layer.effect: MultiEffect {
-                        blurEnabled: true
-                        blurMax: 64
-                        blur: 1.0
-                    }
-                    opacity: wallpaperItem.wallpaperZoomedOut ? 1.0 : 0.0
-                    Behavior on opacity {
-                        NumberAnimation { duration: 375; easing.type: Easing.OutCubic }
+                    AnchorAnimation {
+                        duration: Appearance.animation.elementMove.duration
+                        easing.type: Appearance.animation.elementMove.type
+                        easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
                     }
                 }
 
-                // ========== ZOOM-OUT SCALE CONTAINER ==========
-                Item {
-                    id: zoomContainer
-                    anchors.fill: parent
-
-                    // Calculate gap-aware center point for scale origin
-                    readonly property bool barVisible: GlobalStates.barOpen && !GlobalStates.screenLocked
-                    readonly property bool barVertical: Config.options.bar.vertical
-                    readonly property bool barBottom: Config.options.bar.bottom
-                    readonly property int barSize: barVertical ? (Appearance.sizes.verticalBarWidth ?? 0) : (Appearance.sizes.barHeight ?? 0)
-                    readonly property int gap: Appearance.gapsOut ?? 0
-
-                    readonly property int padLeft: barVisible && barVertical && !barBottom ? barSize : gap
-                    readonly property int padRight: barVisible && barVertical && barBottom ? barSize : gap
-                    readonly property int padTop: barVisible && !barVertical && !barBottom ? barSize : gap
-                    readonly property int padBottom: barVisible && !barVertical && barBottom ? barSize : gap
-
-                    transformOrigin: Item.TopLeft
-                    transform: [
-                        Scale {
-                            origin.x: zoomContainer.padLeft + (bgRoot.width - zoomContainer.padLeft - zoomContainer.padRight) / 2
-                            origin.y: zoomContainer.padTop + (bgRoot.height - zoomContainer.padTop - zoomContainer.padBottom) / 2
-                            xScale: zoomContainer.scaleValue
-                            yScale: zoomContainer.scaleValue
-                        }
-                    ]
-
-                    // Scale per style:
-                    // Style 0 (Gnome Like): zoom out to 0.85
-                    // Style 1 (Default/Mirrored): zoom out to 0.85 (blur handled by compositor overlay)
-                    // Style 2 (Zoom In): zoom in to 1.15
-                    property real scaleValue: {
-                        if (!wallpaperItem.wallpaperZoomedOut)
-                            return 1.0;
-                        if (Config.options.background.zoomOutStyle === 2)
-                            return 1.15;
-                        return 0.85;
+                FadeLoader {
+                    shown: Config.options.background.widgets.weather.enable
+                    sourceComponent: WeatherWidget {
+                        screenWidth: bgRoot.screen.width
+                        screenHeight: bgRoot.screen.height
+                        scaledScreenWidth: bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale: 1
                     }
-                    Behavior on scaleValue {
-                        NumberAnimation { duration: 375; easing.type: Easing.OutCubic }
+                }
+
+                FadeLoader {
+                    shown: Config.options.background.widgets.clock.enable
+                    sourceComponent: ClockWidget {
+                        screenWidth: bgRoot.screen.width
+                        screenHeight: bgRoot.screen.height
+                        scaledScreenWidth: bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale: 1
+                        wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered
                     }
-
-                    // Clip with rounded corners during zoom (style 0 only)
-                    layer.enabled: wallpaperItem.wallpaperClipRadius > 0 && Config.options.background.zoomOutStyle === 0
-                    layer.effect: OpacityMask {
-                        maskSource: Rectangle {
-                            width: zoomContainer.width
-                            height: zoomContainer.height
-                            radius: wallpaperItem.wallpaperClipRadius
-                        }
-                    }
-
-                    // Wallpaper
-                    StyledImage {
-                        id: wallpaper
-                        visible: opacity > 0 && !blurLoader.active
-                        opacity: (status === Image.Ready && !bgRoot.wallpaperIsVideo) ? 1 : 0
-                        cache: false
-                        smooth: false
-
-                        property int workspaceIndex: (bgRoot.monitor.activeWorkspace?.id ?? 1) - 1
-                        property real middleFraction: 0.5
-                        property real fraction: {
-                            if (bgRoot.totalWorkspaces <= 1) {
-                                return middleFraction;
-                            }
-                            return Math.max(0, Math.min(1, workspaceIndex / (bgRoot.totalWorkspaces - 1)));
-                        }
-
-                        property real usedFractionX: {
-                            let usedFraction = middleFraction;
-                            if (Config.options.background.parallax.enableWorkspace && !bgRoot.verticalParallax) {
-                                usedFraction = fraction;
-                            }
-                            if (Config.options.background.parallax.enableSidebar) {
-                                let sidebarFraction = bgRoot.parallaxRation / bgRoot.workspaceChunkSize / 2;
-                                usedFraction += (sidebarFraction * GlobalStates.sidebarRightOpen - sidebarFraction * GlobalStates.sidebarLeftOpen);
-                            }
-                            return Math.max(0, Math.min(1, usedFraction));
-                        }
-                        property real usedFractionY: {
-                            let usedFraction = middleFraction;
-                            if (Config.options.background.parallax.enableWorkspace && bgRoot.verticalParallax) {
-                                usedFraction = fraction;
-                            }
-                            return Math.max(0, Math.min(1, usedFraction));
-                        }
-
-                        x: {
-                            if (bgRoot.screen.width > width) {
-                                return (bgRoot.screen.width - width) / 2;
-                            }
-                            return - bgRoot.parallaxTotalPixelsX * usedFractionX;
-                        }
-                        y: {
-                            if (bgRoot.screen.height > height) {
-                                return (bgRoot.screen.height - height) / 2;
-                            }
-                            return - bgRoot.parallaxTotalPixelsY * usedFractionY;
-                        }
-
-                        source: bgRoot.wallpaperSafetyTriggered ? "" : bgRoot.wallpaperPath
-                        fillMode: Image.PreserveAspectCrop
-                        Behavior on x {
-                            NumberAnimation {
-                                duration: 600
-                                easing.type: Easing.OutCubic
-                            }
-                        }
-                        Behavior on y {
-                            NumberAnimation {
-                                duration: 600
-                                easing.type: Easing.OutCubic
-                            }
-                        }
-                        width: bgRoot.scaledWallpaperWidth
-                        height: bgRoot.scaledWallpaperHeight
-                    }
-
-                    Loader {
-                        id: blurLoader
-                        active: Config.options.lock.blur.enable && (GlobalStates.screenLocked || scaleAnim.running)
-                        anchors.fill: wallpaper
-                        scale: GlobalStates.screenLocked ? Config.options.lock.blur.extraZoom : 1
-                        Behavior on scale {
-                            NumberAnimation {
-                                id: scaleAnim
-                                duration: 400
-                                easing.type: Easing.BezierSpline
-                                easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-                            }
-                        }
-                        sourceComponent: GaussianBlur {
-                            source: wallpaper
-                            radius: GlobalStates.screenLocked ? Config.options.lock.blur.radius : 0
-                            samples: radius * 2 + 1
-
-                            Rectangle {
-                                opacity: GlobalStates.screenLocked ? 1 : 0
-                                anchors.fill: parent
-                                color: CF.ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7)
-                            }
-                        }
-                    }
-
-                    WidgetCanvas {
-                        id: widgetCanvas
-                        width: parent.width
-                        height: parent.height
-                        readonly property real parallaxFactor: {
-                            var f = Config.options.background.parallax.widgetsFactor;
-                            return f / bgRoot.parallaxRation;
-                        }
-                        readonly property real baseWallpaperOffsetX: (bgRoot.screen.width - wallpaper.width) / 2
-                        readonly property real baseWallpaperOffsetY: (bgRoot.screen.height - wallpaper.height) / 2
-                        readonly property real wallpaperTotalOffsetX: wallpaper.x - baseWallpaperOffsetX
-                        readonly property real wallpaperTotalOffsetY: wallpaper.y - baseWallpaperOffsetY
-                        readonly property bool locked: GlobalStates.screenLocked
-                        x: wallpaperTotalOffsetX * parallaxFactor * !locked
-                        y: wallpaperTotalOffsetY * parallaxFactor * !locked
-
-                        transitions: Transition {
-                            PropertyAnimation {
-                                properties: "width,height"
-                                duration: Appearance.animation.elementMove.duration
-                                easing.type: Appearance.animation.elementMove.type
-                                easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
-                            }
-                            AnchorAnimation {
-                                duration: Appearance.animation.elementMove.duration
-                                easing.type: Appearance.animation.elementMove.type
-                                easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
-                            }
-                        }
-
-                        FadeLoader {
-                            shown: Config.options.background.widgets.weather.enable
-                            sourceComponent: WeatherWidget {
-                                screenWidth: bgRoot.screen.width
-                                screenHeight: bgRoot.screen.height
-                                scaledScreenWidth: bgRoot.screen.width
-                                scaledScreenHeight: bgRoot.screen.height
-                                wallpaperScale: 1
-                            }
-                        }
-
-                        FadeLoader {
-                            shown: Config.options.background.widgets.clock.enable
-                            sourceComponent: ClockWidget {
-                                screenWidth: bgRoot.screen.width
-                                screenHeight: bgRoot.screen.height
-                                scaledScreenWidth: bgRoot.screen.width
-                                scaledScreenHeight: bgRoot.screen.height
-                                wallpaperScale: 1
-                                wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered
-                            }
-                        }
-                    }
-                } // end zoomContainer
-            } // end wallpaperItem
-        } // end PanelWindow
-    } // end Variants
-
-    // ========== COMPOSITOR BLUR OVERLAY ==========
-    // Separate fullscreen layer that triggers Hyprland's hardware-accelerated blur
-    // over windows when overview/cheatsheet is open (Mirrored Plane style only)
-    Variants {
-        id: blurOverlayVariant
-        model: Quickshell.screens
-
-        PanelWindow {
-            id: blurOverlayWindow
-            required property var modelData
-            screen: modelData
-            exclusionMode: ExclusionMode.Ignore
-            WlrLayershell.layer: WlrLayer.Top
-            WlrLayershell.namespace: "quickshell:workspaceBlurOverlay"
-            color: "transparent"
-            anchors { top: true; bottom: true; left: true; right: true }
-
-            readonly property bool animEnabled: Config.options.background.zoomOutEnabled
-            readonly property bool isMirroredStyle: Config.options.background.zoomOutStyle === 1
-            readonly property bool isActive: animEnabled && isMirroredStyle && (GlobalStates.cheatsheetOpen || GlobalStates.overviewOpen)
-
-            property real zoomProgress: isActive ? 1.0 : 0.0
-            Behavior on zoomProgress {
-                NumberAnimation { duration: 375; easing.type: Easing.OutCubic }
-            }
-            visible: isActive || zoomProgress > 0.001
-
-            Rectangle {
-                anchors.fill: parent
-                color: Qt.rgba(0, 0, 0, 0.25)
-                opacity: blurOverlayWindow.zoomProgress
+                }
             }
         }
     }

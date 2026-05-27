@@ -14,6 +14,11 @@ QS_LIVE="$HOME/.config/quickshell"
 QS_REPO="$REPO_ROOT/dots/.config/quickshell"
 QS_PKGBUILD="$REPO_ROOT/sdata/dist-arch/illogical-impulse-quickshell-git"
 
+# Fork-specific packages (not in upstream)
+FORK_PACKAGES=(
+  awww
+)
+
 MODE=""
 NO_PULL=false
 
@@ -198,6 +203,10 @@ full)
   log "Beginning full system reforging..."
   cd "$REPO_ROOT"
   ./setup install
+  if [[ ${#FORK_PACKAGES[@]} -gt 0 ]]; then
+    log "Installing fork packages..."
+    sudo pacman -S --needed --noconfirm "${FORK_PACKAGES[@]}"
+  fi
   ;;
 quickshell)
   rebuild_quickshell

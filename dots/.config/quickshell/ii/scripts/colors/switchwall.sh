@@ -256,6 +256,12 @@ switch() {
       generate_colors_material_args=(--path "$imgpath")
       # Update wallpaper path in config
       set_wallpaper_path "$imgpath"
+      if command -v awww &>/dev/null; then
+        awww img "$imgpath" \
+          --transition-type random \
+          --transition-duration 2 \
+          --transition-fps 60 &
+      fi
       remove_restore
     fi
   fi
