@@ -112,13 +112,15 @@ StyledPopup {
         }
     }
 
-    ColumnLayout {
-        id: contentColumn
-        anchors {
-            fill: parent
-            margins: 14
-        }
-        spacing: 0
+    Item {
+        anchors.centerIn: parent
+        implicitWidth: contentColumn.implicitWidth + 8
+        implicitHeight: contentColumn.implicitHeight + 8
+
+        ColumnLayout {
+            id: contentColumn
+            anchors.centerIn: parent
+            spacing: 0
 
         // === HEADER ===
         RowLayout {
@@ -229,5 +231,6 @@ StyledPopup {
         }
 
         Item { implicitHeight: 6 }
+        }
     }
 }
