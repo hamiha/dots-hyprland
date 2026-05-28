@@ -1,4 +1,3 @@
-````md
 <div align="center">
 
 # ✦ illogical-impulse: Runeforge
@@ -85,4 +84,3 @@ Massive respect to the people who made this possible:
 Built with questionable decisions and excessive shell customization.
 
 </div>
-```
