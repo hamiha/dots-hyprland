@@ -15,7 +15,9 @@ import Quickshell.Services.Mpris
 Item { // Player instance
     id: root
     required property MprisPlayer player
-    property var artUrl: player?.trackArtUrl
+    property var artUrl: (player?.trackArtUrl && player.trackArtUrl.length > 0)
+        ? player.trackArtUrl
+        : StringUtils.getYoutubeArtUrl(player?.metadata?.["xesam:url"] ?? "")
     property string artDownloadLocation: Directories.coverArt
     property string artFileName: Qt.md5(artUrl)
     property string artFilePath: `${artDownloadLocation}/${artFileName}`
@@ -77,7 +79,18 @@ Item { // Player instance
         id: coverArtDownloader
         property string targetFile: root.artUrl
         property string artFilePath: root.artFilePath
-        command: [ "bash", "-c", `[ -f ${artFilePath} ] || curl -4 -sSL '${targetFile}' -o '${artFilePath}'` ]
+        command: [
+            "bash", "-c", `
+                out=$1
+                url=$2
+                if [ -z "$url" ] || [ -f "$out" ]; then exit 0; fi
+                case "$url" in *"/oembed?"*)
+                    url=$(curl -4 -fsSL "$url" | sed -n 's/.*"thumbnail_url":"\\([^"]*\\)".*/\\1/p') ;;
+                esac
+                if [ -n "$url" ]; then curl -4 -fsSL "$url" -o "$out"; fi
+            `,
+            "qs-coverart", artFilePath, targetFile
+        ]
         onExited: (exitCode, exitStatus) => {
             root.downloaded = true
         }

@@ -224,6 +224,42 @@ ContentPage {
                 Config.options.appearance.transparency.enable = checked;
             }
         }
+
+        ConfigSwitch {
+            enabled: Config.options.appearance.transparency.enable
+            buttonIcon: "auto_awesome"
+            text: Translation.tr("Auto transparency")
+            checked: Config.options.appearance.transparency.automatic
+            onCheckedChanged: {
+                Config.options.appearance.transparency.automatic = checked;
+            }
+        }
+
+        ConfigSpinBox {
+            enabled: Config.options.appearance.transparency.enable && !Config.options.appearance.transparency.automatic
+            icon: "background_dot_large"
+            text: Translation.tr("Background transparency (%)")
+            value: Math.round(Config.options.appearance.transparency.backgroundTransparency * 100)
+            from: 0
+            to: 100
+            stepSize: 1
+            onValueChanged: {
+                Config.options.appearance.transparency.backgroundTransparency = value / 100;
+            }
+        }
+
+        ConfigSpinBox {
+            enabled: Config.options.appearance.transparency.enable && !Config.options.appearance.transparency.automatic
+            icon: "layers"
+            text: Translation.tr("Content transparency (%)")
+            value: Math.round(Config.options.appearance.transparency.contentTransparency * 100)
+            from: 0
+            to: 100
+            stepSize: 1
+            onValueChanged: {
+                Config.options.appearance.transparency.contentTransparency = value / 100;
+            }
+        }
     }
 
     ContentSection {

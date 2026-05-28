@@ -31,6 +31,16 @@ Singleton {
     property real timeToEmpty: UPower.displayDevice.timeToEmpty
     property real timeToFull: UPower.displayDevice.timeToFull
 
+    property int cycleCount: {
+        const text = fileCycleCount.text?.trim() ?? "";
+        return text.length > 0 ? parseInt(text) || 0 : -1;
+    }
+
+    FileView {
+        id: fileCycleCount
+        path: "/sys/class/power_supply/BAT0/cycle_count"
+    }
+
     property real health: (function() {
         const devList = UPower.devices.values;
         for (let i = 0; i < devList.length; ++i) {

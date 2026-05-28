@@ -37,6 +37,8 @@ Item {
                 root.showBluetoothDialog = false;
                 root.showAudioOutputDialog = false;
                 root.showAudioInputDialog = false;
+                root.showNightLightDialog = false;
+                root.editMode = false;
             }
         }
     }
@@ -160,7 +162,13 @@ Item {
         readonly property bool shown: root[shownPropertyString]
         anchors.fill: parent
 
-        onShownChanged: if (shown) toggleDialogLoader.active = true;
+        onShownChanged: {
+            if (shown) {
+                toggleDialogLoader.active = true;
+            } else if (!GlobalStates.sidebarRightOpen) {
+                toggleDialogLoader.active = false;
+            }
+        }
         active: shown
         onActiveChanged: {
             if (active) {
