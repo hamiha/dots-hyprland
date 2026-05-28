@@ -8,12 +8,14 @@ import QtQuick.Layouts
 StyledPopup {
     id: root
 
+    Item {
+        anchors.centerIn: parent
+        implicitWidth: gridLayout.implicitWidth + 8
+        implicitHeight: columnLayout.implicitHeight + 8
+
     ColumnLayout {
         id: columnLayout
-        anchors {
-            fill: parent
-            margins: 14
-        }
+        anchors.centerIn: parent
         spacing: 0
 
         // === HEADER ===
@@ -163,5 +165,6 @@ StyledPopup {
                 value: `${Battery.cycleCount}`
             }
         }
+    }
     }
 }
