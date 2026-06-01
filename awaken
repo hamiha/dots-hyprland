@@ -1,40 +1,81 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="$HOME/Desktop/dots-hyprland"
-REPO_QS="$REPO/dots/.config/quickshell"
-LIVE="$HOME/.config/quickshell"
-BACKUP="$HOME/.config/quickshell.backup.$(date +%F-%H%M%S)"
+# awaken - Apply sealed repo state into the live environment
+# Usage:
+#   ./awaken              Awaken quickshell only
+#   ./awaken hypr         Awaken hyprland config
+#   ./awaken fish         Awaken fish config
+#   ./awaken kitty        Awaken kitty config
+#   ./awaken hypr kitty   Combine targets
+#   ./awaken all          Awaken everything
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")"
+REPO_DOTS="$REPO_ROOT/dots/.config"
 BRANCH="runeforge"
 
-echo "== Awakening archived shell state =="
+TARGETS=()
 
-if [ ! -d "$REPO/.git" ]; then
-  echo "ERROR: The archive could not be found:"
-  echo "$REPO"
-  exit 1
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    all)        TARGETS=(quickshell hypr fish kitty); shift ;;
+    hypr)       TARGETS+=(hypr); shift ;;
+    fish)       TARGETS+=(fish); shift ;;
+    kitty)      TARGETS+=(kitty); shift ;;
+    quickshell) TARGETS+=(quickshell); shift ;;
+    -h|--help)
+      echo "Usage: $(basename "$0") [target ...]"
+      echo "  (no args)    Awaken quickshell only"
+      echo "  all          Awaken quickshell + hyprland + fish + kitty"
+      echo "  hypr         Awaken hyprland config"
+      echo "  fish         Awaken fish config"
+      echo "  kitty        Awaken kitty config"
+      echo "  quickshell   Awaken quickshell config"
+      echo "Targets can be combined: $(basename "$0") hypr fish"
+      exit 0 ;;
+    *) echo "Unknown target: $1"; exit 1 ;;
+  esac
+done
+
+if [[ ${#TARGETS[@]} -eq 0 ]]; then
+  TARGETS=(quickshell)
 fi
 
-if [ ! -d "$REPO_QS" ]; then
-  echo "ERROR: No sealed Quickshell state was found:"
-  echo "$REPO_QS"
-  exit 1
-fi
+awaken_config() {
+  local name="$1"
+  local repo="$REPO_DOTS/$name"
+  local live="$HOME/.config/$name"
 
-cd "$REPO"
+  if [[ ! -d "$repo" ]]; then
+    echo "SKIP: no sealed state found at $repo"
+    return 0
+  fi
 
+  if [[ -d "$live" ]]; then
+    local backup="$live.backup.$(date +%F-%H%M%S)"
+    echo "Backing up $name -> $backup"
+    cp -a "$live" "$backup"
+  fi
+
+  echo "Awakening $name..."
+  mkdir -p "$live"
+  rsync -a --delete \
+    --exclude='.git' \
+    --exclude='.gitmodules' \
+    "$repo/" \
+    "$live/"
+}
+
+# --- Ensure branch ---
+cd "$REPO_ROOT"
 echo "Channeling branch: $BRANCH"
 git checkout "$BRANCH"
 
-echo "Preserving current shell state at:"
-echo "$BACKUP"
-cp -a "$LIVE" "$BACKUP"
+# --- Awaken ---
+for target in "${TARGETS[@]}"; do
+  awaken_config "$target"
+done
 
-echo "Awakening sealed shell state into the live environment..."
-rsync -a --delete \
-  --exclude='.git' \
-  --exclude='.gitmodules' \
-  "$REPO_QS/" \
-  "$LIVE/"
-
-echo "Awakening complete. The live shell now reflects the sealed state."
+echo ""
+echo "Awakening complete."

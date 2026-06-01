@@ -54,7 +54,12 @@ Because apparently normal names like `sync.sh` were too spiritually empty.
 ### Apply repository shell state into the live environment
 
 ```bash
-./awaken
+./awaken              # quickshell only (default)
+./awaken hypr         # hyprland config
+./awaken fish         # fish config
+./awaken kitty        # kitty config
+./awaken hypr kitty   # combine targets
+./awaken all          # everything
 ```
 
 ### Reforge Quickshell
