@@ -3,7 +3,7 @@ set -euo pipefail
 
 # forge - Reforge the shell from the sealed Runeforge branch
 # Modes:
-#   full        - Full system reforging ritual
+#   all         - Full system reforging ritual
 #   quickshell  - Reforge Quickshell and awaken sealed shell state
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -33,7 +33,7 @@ usage() {
 Usage: $(basename "$0") [MODE] [OPTIONS]
 
 Rituals:
-  full          Full system reforging ritual
+  all           Full system reforging ritual
   quickshell    Reforge Quickshell + awaken sealed shell state
 
 Options:
@@ -41,7 +41,7 @@ Options:
   -h, --help    Show this help
 
 Examples:
-  $(basename "$0") full
+  $(basename "$0") all
   $(basename "$0") quickshell
   $(basename "$0") quickshell --no-pull
 EOF
@@ -146,7 +146,7 @@ restart_quickshell() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-  full | quickshell)
+  all | quickshell)
     MODE="$1"
     shift
     ;;
@@ -169,7 +169,7 @@ done
 if [[ -z "$MODE" ]]; then
   echo ""
   printf "${BOLD}Choose a forging ritual:${RST}\n"
-  echo "  1) full         - Full system reforging ritual"
+  echo "  1) all          - Full system reforging ritual"
   echo "  2) quickshell   - Reforge and awaken Quickshell"
   echo ""
   printf "${CYAN}:: ${RST}Select ritual [1/2]: "
@@ -177,8 +177,8 @@ if [[ -z "$MODE" ]]; then
   read -r choice
 
   case "$choice" in
-  1 | full)
-    MODE="full"
+  1 | all)
+    MODE="all"
     ;;
   2 | quickshell | qs)
     MODE="quickshell"
@@ -199,7 +199,7 @@ pull_latest
 init_submodules
 
 case "$MODE" in
-full)
+all)
   log "Beginning full system reforging..."
   cd "$REPO_ROOT"
   ./setup install

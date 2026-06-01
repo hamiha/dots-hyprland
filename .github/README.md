@@ -71,7 +71,7 @@ Because apparently normal names like `sync.sh` were too spiritually empty.
 ### Full system reforging
 
 ```bash
-./forge full
+./forge all
 ```
 
 ---
