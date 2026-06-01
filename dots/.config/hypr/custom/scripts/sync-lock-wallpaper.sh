@@ -2,7 +2,7 @@
 
 SHELL_CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/illogical-impulse/config.json"
 
-TARGET_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/custom/lockscreen-wallpaper"
+TARGET_LINK="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprlock/lockscreen-wallpaper"
 
 LOG="${XDG_CACHE_HOME:-$HOME/.cache}/hyprlock-wallpaper-sync.log"
 

@@ -8,8 +8,10 @@ function nvm
     bash -c "source $HOME/.nvm/nvm.sh; nvm $argv"
 end
 
-fish_add_path /home/hai/.npm-global/bin
+# set -gx XDG_DATA_DIRS /usr/local/share:/usr/share
 
+fish_add_path /home/hai/.npm-global/bin
+# 
 # Commands to run in interactive sessions can go here
 if status is-interactive
     # No greeting

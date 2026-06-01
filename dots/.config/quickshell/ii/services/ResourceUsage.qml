@@ -137,7 +137,7 @@ Singleton {
 
     FileView {
         id: fileCpuTemp
-        path: "/sys/class/thermal/thermal_zone0/temp"
+        path: "/sys/class/thermal/thermal_zone12/temp"
     }
 
     Process {

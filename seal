@@ -1,54 +1,94 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="$HOME/Desktop/dots-hyprland"
-LIVE="$HOME/.config/quickshell"
-REPO_QS="$REPO/dots/.config/quickshell"
+# seal - Sync live config back into the repo
+# Usage:
+#   ./seal              Seal quickshell only
+#   ./seal hypr         Seal hyprland only
+#   ./seal fish         Seal fish only
+#   ./seal kitty        Seal kitty only
+#   ./seal hypr kitty   Seal multiple targets
+#   ./seal all          Seal everything
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")"
+REPO_DOTS="$REPO_ROOT/dots/.config"
 BRANCH="runeforge"
 
-echo "== Seal ritual initiated =="
+TARGETS=()
 
-if [ ! -d "$REPO/.git" ]; then
-  echo "ERROR: The archive could not be found:"
-  echo "$REPO"
-  exit 1
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    all)        TARGETS=(quickshell hypr fish kitty); shift ;;
+    hypr)       TARGETS+=(hypr); shift ;;
+    fish)       TARGETS+=(fish); shift ;;
+    kitty)      TARGETS+=(kitty); shift ;;
+    quickshell) TARGETS+=(quickshell); shift ;;
+    -h|--help)
+      echo "Usage: $(basename "$0") [target ...]"
+      echo "  (no args)    Seal quickshell only"
+      echo "  all          Seal quickshell + hyprland + fish + kitty"
+      echo "  hypr         Seal hyprland config"
+      echo "  fish         Seal fish config"
+      echo "  kitty        Seal kitty config"
+      echo "  quickshell   Seal quickshell config"
+      echo "Targets can be combined: $(basename "$0") hypr fish"
+      exit 0 ;;
+    *) echo "Unknown target: $1"; exit 1 ;;
+  esac
+done
+
+# Default to quickshell if no targets specified
+if [[ ${#TARGETS[@]} -eq 0 ]]; then
+  TARGETS=(quickshell)
 fi
 
-if [ ! -d "$LIVE" ]; then
-  echo "ERROR: live quickshell config not found:"
-  echo "$LIVE"
-  exit 1
-fi
+seal_config() {
+  local name="$1"
+  local live="$HOME/.config/$name"
+  local repo="$REPO_DOTS/$name"
 
-mkdir -p "$REPO_QS"
+  if [[ ! -d "$live" ]]; then
+    echo "SKIP: $live not found"
+    return 0
+  fi
 
-cd "$REPO"
+  echo "Sealing $name..."
+  mkdir -p "$repo"
+  rsync -a --delete \
+    --exclude='.git' \
+    --exclude='.gitmodules' \
+    "$live/" \
+    "$repo/"
 
-echo "Inspecting active branch..."
+  # Clean nested git artifacts
+  find "$repo" -name .git -type d -prune -exec rm -rf {} +
+  find "$repo" -name .git -type f -delete
+  find "$repo" -name .gitmodules -type f -delete
+}
+
+# --- Ensure branch ---
+cd "$REPO_ROOT"
+
 if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
   git checkout "$BRANCH"
 else
   git checkout -b "$BRANCH"
 fi
 
-echo "Inscribing live shell state into repository..."
-rsync -a --delete \
-  --exclude='.git' \
-  --exclude='.gitmodules' \
-  "$LIVE/" \
-  "$REPO_QS/"
+# --- Seal ---
+for target in "${TARGETS[@]}"; do
+  seal_config "$target"
+done
 
-echo "Purging foreign Git relics..."
-find "$REPO_QS" -name .git -type d -prune -exec rm -rf {} +
-find "$REPO_QS" -name .git -type f -delete
-find "$REPO_QS" -name .gitmodules -type f -delete
+# --- Status ---
+echo ""
+echo "Changes:"
+STATUS_PATHS=()
+for target in "${TARGETS[@]}"; do
+  STATUS_PATHS+=("dots/.config/$target")
+done
+git status --short "${STATUS_PATHS[@]}"
 
-echo "Current archive changes:"
-git status --short dots/.config/quickshell
-
-if git diff --quiet -- dots/.config/quickshell && git diff --cached --quiet -- dots/.config/quickshell; then
-  echo "The seal remains unchanged."
-  exit 0
-fi
-
-echo "Seal complete. The current shell state has been preserved."
+echo ""
+echo "Seal complete."

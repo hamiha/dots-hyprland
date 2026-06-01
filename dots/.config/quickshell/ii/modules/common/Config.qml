@@ -213,18 +213,7 @@ Singleton {
                 property string wallpaperPath: ""
                 property string thumbnailPath: ""
                 property bool hideWhenFullscreen: true
-                property bool zoomOutEnabled: true
                 property bool workspaceBlur: true
-                property int zoomOutStyle: 0 // 0: Blurred Backing | 1: Mirrored Plane
-                property bool animateWallpaperChanges: true
-                property JsonObject parallax: JsonObject {
-                    property bool vertical: false
-                    property bool autoVertical: false
-                    property bool enableWorkspace: false
-                    property real workspaceZoom: 1.07 // Relative to wallpaper size
-                    property bool enableSidebar: false
-                    property real widgetsFactor: 1.2
-                }
             }
 
             property JsonObject bar: JsonObject {

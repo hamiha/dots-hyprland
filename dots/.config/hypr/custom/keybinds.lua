@@ -4,19 +4,6 @@ hl.unbind("SUPER + SHIFT + L")
 
 hl.bind("SUPER + L", hl.dsp.exec_cmd("pidof hyprlock || hyprlock"), { description = "Session: Lock" })
 
---##! User
-hl.bind(
-	"CTRL + SUPER + Slash",
-	hl.dsp.exec_cmd("xdg-open ~/.config/illogical-impulse/config.json"),
-	{ description = "Edit shell config" }
-)
-
-hl.bind(
-	"CTRL + SUPER + ALT + Slash",
-	hl.dsp.exec_cmd("xdg-open ~/.config/hypr/custom/keybinds.lua"),
-	{ description = "Edit extra keybinds" }
-)
-
 --##! Window
 -- Focusing
 hl.bind("ALT + h", hl.dsp.focus({ direction = "l" }))
@@ -67,6 +54,3 @@ for i = 1, 10 do
 	local numberkey = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 }
 	hl.bind("ALT + SHIFT + code:" .. numberkey[i], hl.dsp.window.move({ workspace = i, follow = false }))
 end
-
--- Remove Super+Shift+L logout/suspend bind from base config
--- hl.unbind("SUPER + SHIFT + L")
