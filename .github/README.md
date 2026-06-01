@@ -1,11 +1,11 @@
 <div align="center">
 
-# ✦ illogical-impulse: Runeforge
+# ✦ Runeforge
 
-**A heavily customized fork of**  
+**A heavily customized fork of**
 [illogical-impulse](https://github.com/end-4/dots-hyprland) by [@end-4](https://github.com/end-4)
 
-Refined, reforged, and repeatedly repaired by me.
+Refined, reforged, and repeatedly repaired.
 
 </div>
 
@@ -13,65 +13,79 @@ Refined, reforged, and repeatedly repaired by me.
 
 ## ✦ Overview
 
-Runeforge is a personal customization layer built on top of the  
+Runeforge is a personal customization layer built on top of the
 [illogical-impulse](https://github.com/end-4/dots-hyprland) ecosystem.
 
 This fork focuses on:
 
 * deeper Quickshell customization
-* workflow tweaks
-* recovery/rebuild tooling
-* state synchronization
-* experimental UI behaviors
-* maintaining a cohesive aesthetic without completely destroying maintainability
+* workflow improvements fueled by repeated annoyance
+* recovery tooling for when experiments become incidents
+* preserving a cohesive aesthetic despite constant tinkering
 
-The shell includes a lightweight ritual-based workflow:
+Runeforge manages configuration through a small set of rituals:
 
-| Ritual   | Purpose                                       |
-| -------- | --------------------------------------------- |
-| `forge`  | Rebuild/reforge the environment               |
-| `seal`   | Preserve live shell state into the repository |
-| `awaken` | Apply sealed state back into the live shell   |
-| `purge`  | Remove old backup relics                      |
+| Ritual   | Purpose                            |
+| -------- | ---------------------------------- |
+| `forge`  | Reforge the environment            |
+| `seal`   | Preserve runes within Runeforge    |
+| `awaken` | Restore runes from Runeforge       |
+| `purge`  | Remove obsolete relics and backups |
 
-Because apparently normal names like `sync.sh` were too spiritually empty.
+Because apparently normal names like `sync.sh` lacked sufficient dramatic energy.
 
 ---
 
 ## ✦ Ritual Workflow
 
-### Seal current shell state into the repository
+### Seal runes into Runeforge
+
+Preserve the current state of selected runes from the live system.
 
 ```bash
-./seal              # quickshell only (default)
-./seal hypr         # hyprland config
-./seal fish         # fish config
-./seal kitty        # kitty config
-./seal hypr kitty   # combine targets
-./seal all          # everything
+./seal              # quickshell rune (default)
+./seal hypr         # hyprland rune
+./seal fish         # fish rune
+./seal kitty        # kitty rune
+./seal hypr kitty   # multiple runes
+./seal all          # all runes
 ```
 
-### Apply repository shell state into the live environment
+### Awaken runes from Runeforge
+
+Restore selected runes from Runeforge into the live system.
 
 ```bash
-./awaken              # quickshell only (default)
-./awaken hypr         # hyprland config
-./awaken fish         # fish config
-./awaken kitty        # kitty config
-./awaken hypr kitty   # combine targets
-./awaken all          # everything
+./awaken              # quickshell rune (default)
+./awaken hypr         # hyprland rune
+./awaken fish         # fish rune
+./awaken kitty        # kitty rune
+./awaken hypr kitty   # multiple runes
+./awaken all          # all runes
 ```
 
 ### Reforge Quickshell
+
+Rebuild the Quickshell environment.
 
 ```bash
 ./forge quickshell
 ```
 
-### Full system reforging
+### Full Reforging
+
+Rebuild the entire environment.
 
 ```bash
 ./forge all
+```
+
+### Purge Relics
+
+Remove obsolete backups and forgotten artifacts from previous reforgings.
+
+```bash
+./purge
 ```
 
 ---
@@ -81,16 +95,19 @@ Because apparently normal names like `sync.sh` were too spiritually empty.
 Massive respect to the people who made this possible:
 
 * **[@end-4](https://github.com/end-4)**
+
   Creator of the original
   [dots-hyprland / illogical-impulse](https://github.com/end-4/dots-hyprland)
 
 * **[@gh0stzk](https://github.com/gh0stzk)**
+
   Weather integration inspiration and related shell utilities
 
 ---
 
 <div align="center">
 
-Built with questionable decisions and excessive shell customization.
+Built with questionable decisions, excessive shell customization,
+and a persistent refusal to leave well enough alone.
 
 </div>
