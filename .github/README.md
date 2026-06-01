@@ -43,8 +43,13 @@ Because apparently normal names like `sync.sh` were too spiritually empty.
 ### Seal current shell state into the repository
 
 ```bash
-./seal
-````
+./seal              # quickshell only (default)
+./seal hypr         # hyprland config
+./seal fish         # fish config
+./seal kitty        # kitty config
+./seal hypr kitty   # combine targets
+./seal all          # everything
+```
 
 ### Apply repository shell state into the live environment
 
