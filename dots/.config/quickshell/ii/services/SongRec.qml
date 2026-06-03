@@ -8,6 +8,7 @@ import Quickshell.Io
 
 Singleton {
     id: root
+    readonly property bool disabled: true // Set to false to re-enable SongRec service
 
     enum MonitorSource { Monitor, Input }
 
@@ -17,6 +18,7 @@ Singleton {
     readonly property bool running: recognizeMusicProc.running
 
     function toggleRunning(running) {
+        if (root.disabled) return;
         if (recognizeMusicProc.running && !running === true) root.manuallyStopped = true;
         if (running != undefined) {
             recognizeMusicProc.running = running

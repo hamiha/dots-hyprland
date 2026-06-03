@@ -15,7 +15,8 @@ import Quickshell
  */
 Singleton {
     id: root
-    
+    readonly property bool disabled: true // Set to false to re-enable LaTeX rendering
+
     readonly property var renderPadding: 4 // This is to prevent cutoff in the rendered images
 
     property list<string> processedHashes: []
@@ -32,6 +33,7 @@ Singleton {
     * Returns the [hash, isNew]
     */
     function requestRender(expression) {
+        if (root.disabled) return [Qt.md5(expression), false];
         // 1. Hash it and initialize necessary variables
         const hash = Qt.md5(expression)
         const imagePath = `${latexOutputPath}/${hash}.svg`

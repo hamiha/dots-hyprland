@@ -17,6 +17,7 @@ import qs.services.ai
  */
 Singleton {
     id: root
+    readonly property bool disabled: true // Set to false to re-enable AI service
 
     property Component aiMessageComponent: AiMessageData {}
     property Component aiModelComponent: AiModel {}
@@ -235,7 +236,7 @@ Singleton {
             "none": [],
         }
     }
-    property list<var> availableTools: Object.keys(root.tools[models[currentModelId]?.api_format])
+    property list<var> availableTools: root.disabled ? [] : Object.keys(root.tools[models[currentModelId]?.api_format])
     property var toolDescriptions: {
         "functions": Translation.tr("Commands, edit configs, search.\nTakes an extra turn to switch to search mode if that's needed"),
         "search": Translation.tr("Gives the model search capabilities (immediately)"),
@@ -254,7 +255,7 @@ Singleton {
     // - key_get_description: Description of pricing and how to get an API key
     // - api_format: The API format of the model. Can be "openai" or "gemini". Default is "openai".
     // - extraParams: Extra parameters to be passed to the model. This is a JSON object.
-    property var models: Config.options.policies.ai === 2 ? {} : {
+    property var models: root.disabled || Config.options.policies.ai === 2 ? {} : {
         "gemini-2.5-flash": aiModelComponent.createObject(this, {
             "name": "Gemini 2.5 Flash",
             "icon": "google-gemini-symbolic",
@@ -298,12 +299,12 @@ Singleton {
     property var modelList: Object.keys(root.models)
     property var currentModelId: Persistent.states?.ai?.model || modelList[0]
 
-    property var apiStrategies: {
+    property var apiStrategies: root.disabled ? {} : {
         "openai": openaiApiStrategy.createObject(this),
         "gemini": geminiApiStrategy.createObject(this),
         "mistral": mistralApiStrategy.createObject(this),
     }
-    property ApiStrategy currentApiStrategy: apiStrategies[models[currentModelId]?.api_format || "openai"]
+    property ApiStrategy currentApiStrategy: root.disabled ? null : apiStrategies[models[currentModelId]?.api_format || "openai"]
 
     function addUserModels() {
         (Config?.options.ai?.extraModels ?? []).forEach(model => {
@@ -315,7 +316,7 @@ Singleton {
     Connections {
         target: Config
         function onReadyChanged() {
-            if (!Config.ready) return;
+            if (root.disabled || !Config.ready) return;
             root.addUserModels()
         }
     }
@@ -324,6 +325,7 @@ Singleton {
     property string pendingFilePath: ""
 
     Component.onCompleted: {
+        if (root.disabled) return;
         setModel(currentModelId, false, false); // Do necessary setup for model
         root.addUserModels() // Config onReadyChanged above might not fire if config is loaded before this service
     }
@@ -357,7 +359,7 @@ Singleton {
 
     Process {
         id: getOllamaModels
-        running: true
+        running: !root.disabled
         command: ["bash", "-c", `${Directories.scriptPath}/ai/show-installed-ollama-models.sh`.replace(/file:\/\//, "")]
         stdout: SplitParser {
             onRead: data => {
@@ -389,7 +391,7 @@ Singleton {
 
     Process {
         id: getDefaultPrompts
-        running: true
+        running: !root.disabled
         command: ["ls", "-1", Directories.defaultAiPrompts]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -403,7 +405,7 @@ Singleton {
 
     Process {
         id: getUserPrompts
-        running: true
+        running: !root.disabled
         command: ["ls", "-1", Directories.userAiPrompts]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -417,7 +419,7 @@ Singleton {
 
     Process {
         id: getSavedChats
-        running: true
+        running: !root.disabled
         command: ["ls", "-1", Directories.aiChats]
         stdout: StdioCollector {
             onStreamFinished: {

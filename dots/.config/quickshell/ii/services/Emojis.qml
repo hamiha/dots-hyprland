@@ -12,6 +12,8 @@ import Quickshell.Io
  */
 Singleton {
     id: root
+    readonly property bool disabled: true // Set to false to re-enable Emoji service
+
     property string emojiScriptPath: `${Directories.config}/hypr/hyprland/scripts/fuzzel-emoji.sh`
 	property string lineBeforeData: "### DATA ###"
     property list<var> list
@@ -57,6 +59,7 @@ Singleton {
         id: emojiFileView
         path: Qt.resolvedUrl(root.emojiScriptPath)
         onLoadedChanged: {
+            if (root.disabled) return;
             const fileContent = emojiFileView.text()
             root.updateEmojis(fileContent)
         }

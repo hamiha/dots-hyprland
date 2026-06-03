@@ -6,6 +6,7 @@ import qs.modules.common.utils
 
 Singleton {
     id: root
+    readonly property bool disabled: true // Set to false to re-enable Google Cloud service
 
     property var keyContent: ({})
     property string keyProjectId: keyContent?.project_id
@@ -96,15 +97,18 @@ Singleton {
     }
 
     Component.onCompleted: {
+        if (root.disabled) return;
         loadKeyIfPossible();
     }
 
     Connections {
         target: KeyringStorage
         function onLoadedChanged() {
+            if (root.disabled) return;
             root.loadKeyIfPossible();
         }
         function onDataChanged() {
+            if (root.disabled) return;
             root.loadKeyIfPossible();
         }
     }

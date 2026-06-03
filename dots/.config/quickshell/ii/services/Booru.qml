@@ -11,6 +11,8 @@ import QtQuick;
  */
 Singleton {
     id: root
+    readonly property bool disabled: true // Set to false to re-enable Booru service
+
     property Component booruResponseDataComponent: BooruResponseData {}
 
     signal tagSuggestion(string query, var suggestions)
@@ -359,6 +361,7 @@ Singleton {
     }
 
     function makeRequest(tags, nsfw=false, limit=20, page=1) {
+        if (root.disabled) return;
         var url = constructRequestUrl(tags, nsfw, limit, page)
         console.log("[Booru] Making request to " + url)
 
@@ -423,6 +426,7 @@ Singleton {
 
     property var currentTagRequest: null
     function triggerTagSearch(query) {
+        if (root.disabled) return;
         if (currentTagRequest) {
             currentTagRequest.abort();
         }
