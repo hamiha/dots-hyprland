@@ -26,6 +26,10 @@ Singleton {
     property real cpuTemp: 0
     property var previousCpuStats
 
+    property real diskTotal: 1   // in KB
+    property real diskUsed: 0    // in KB
+    property real diskUsedPercentage: diskTotal > 0 ? diskUsed / diskTotal : 0
+
     property string maxAvailableMemoryString: kbToGbString(ResourceUsage.memoryTotal)
     property string maxAvailableSwapString: kbToGbString(ResourceUsage.swapTotal)
     property string maxAvailableCpuString: "--"
@@ -77,6 +81,7 @@ Singleton {
             fileMeminfo.reload()
             fileStat.reload()
             fileCpuTemp.reload()
+            dfProc.running = true
 
             // Parse memory and swap usage
             const textMeminfo = fileMeminfo.text()
@@ -138,6 +143,21 @@ Singleton {
     FileView {
         id: fileCpuTemp
         path: "/sys/class/thermal/thermal_zone12/temp"
+    }
+
+    Process {
+        id: dfProc
+        command: ["df", "-k", "--output=size,used", "/"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const lines = text.trim().split("\n")
+                if (lines.length >= 2) {
+                    const parts = lines[1].trim().split(/\s+/)
+                    root.diskTotal = Number(parts[0]) || 1
+                    root.diskUsed = Number(parts[1]) || 0
+                }
+            }
+        }
     }
 
     Process {

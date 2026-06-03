@@ -108,19 +108,34 @@ Item { // Bar content region
         }
         spacing: 4
 
-        BarGroup {
-            id: leftCenterGroup
+        Item {
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth: root.centerSideModuleWidth
+            implicitHeight: leftCenterRow.implicitHeight
 
-            Resources {
-                alwaysShowAllResources: root.useShortenedForm === 2
-                Layout.fillWidth: root.useShortenedForm === 2
-            }
+            Row {
+                id: leftCenterRow
+                anchors.fill: parent
+                spacing: 4
 
-            Media {
-                visible: root.useShortenedForm < 2
-                Layout.fillWidth: true
+                BarGroup {
+                    id: resourcesPill
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Resources {
+                        alwaysShowAllResources: root.useShortenedForm === 2
+                    }
+                }
+
+                BarGroup {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: root.useShortenedForm < 2
+                    implicitWidth: Math.max(0, parent.width - resourcesPill.width - parent.spacing)
+
+                    Media {
+                        Layout.fillWidth: true
+                    }
+                }
             }
         }
 

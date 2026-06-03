@@ -230,6 +230,19 @@ StyledPopup {
             total: ResourceUsage.swapTotal
         }
 
+        // Swap → Disk divider
+        Item { implicitHeight: 10 }
+        Divider {}
+        Item { implicitHeight: 10 }
+
+        // === DISK ===
+        MemoryCard {
+            label: "Disk"
+            icon: "hard_drive"
+            used: ResourceUsage.diskUsed
+            total: ResourceUsage.diskTotal
+        }
+
         Item { implicitHeight: 6 }
         }
     }
