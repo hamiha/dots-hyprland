@@ -29,11 +29,11 @@ StyledPopup {
                 StyledText {
                     text: "BATTERY"
                     font {
-                        pixelSize: Appearance.font.pixelSize.smaller
-                        weight: Font.Medium
+                        pixelSize: Appearance.font.pixelSize.small
+                        weight: Font.Bold
                         letterSpacing: 1
                     }
-                    color: Appearance.colors.colOutline
+                    color: "white"
                 }
 
                 StyledText {
