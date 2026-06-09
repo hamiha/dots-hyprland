@@ -9,7 +9,6 @@ depends=(
   hyprshot
   slurp
   swappy
-  tesseract
-  tesseract-data-eng
+
   wf-recorder
 )
