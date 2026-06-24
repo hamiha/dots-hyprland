@@ -139,7 +139,7 @@ StyledPopup {
                 visible: {
                     let timeValue = Battery.isCharging ? Battery.timeToFull : Battery.timeToEmpty;
                     let power = Battery.energyRate;
-                    return !(Battery.chargeState == 4 || timeValue <= 0 || power <= 0.01);
+                    return !(Battery.chargeState == 4 || (Battery.isPluggedIn && !Battery.isCharging) || timeValue <= 0 || power <= 0.01);
                 }
                 title: Battery.isCharging ? Translation.tr("Time to full") : Translation.tr("Time to empty")
                 symbol: "schedule"
