@@ -13,8 +13,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")"
 REPO_DOTS="$REPO_ROOT/dots/.config"
-BRANCH="runeforge"
-
 TARGETS=()
 
 while [[ $# -gt 0 ]]; do
@@ -67,14 +65,7 @@ seal_config() {
   find "$repo" -name .gitmodules -type f -delete
 }
 
-# --- Ensure branch ---
 cd "$REPO_ROOT"
-
-if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
-  git checkout "$BRANCH"
-else
-  git checkout -b "$BRANCH"
-fi
 
 # --- Seal ---
 for target in "${TARGETS[@]}"; do
