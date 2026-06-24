@@ -26,13 +26,17 @@ Scope {
         property bool monitorIsFocused: Hyprland.focusedMonitor?.id == monitor?.id
 
         property bool exitAnimating: false
+        property bool panelVisible: false
         Timer {
             id: exitAnimTimer
             interval: 130 // slightly longer than slideOut duration (100)
-            onTriggered: panelWindow.exitAnimating = false
+            onTriggered: {
+                panelWindow.exitAnimating = false
+                panelWindow.panelVisible = false
+            }
         }
 
-        visible: GlobalStates.overviewOpen || panelWindow.exitAnimating
+        visible: panelWindow.panelVisible
 
         WlrLayershell.namespace: "quickshell:overview"
         WlrLayershell.layer: WlrLayer.Overlay
@@ -43,7 +47,7 @@ Scope {
         color: "transparent"
 
         mask: Region {
-            item: (GlobalStates.overviewOpen || panelWindow.exitAnimating) ? contentItem : null
+            item: panelWindow.panelVisible ? contentItem : null
         }
 
         anchors {
@@ -67,6 +71,7 @@ Scope {
                     overviewScope.dontAutoCancelSearch = false
                     GlobalFocusGrab.dismiss()
                 } else {
+                    panelWindow.panelVisible = true
                     panelWindow.exitAnimating = false
                     exitAnimTimer.stop()
                     if (!overviewScope.dontAutoCancelSearch) {
