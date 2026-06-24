@@ -85,24 +85,14 @@ StyledPopup {
         }
 
         // === PROGRESS BAR ===
-        Item {
+        StyledProgressBar {
             Layout.fillWidth: true
             Layout.topMargin: 6
-            height: 5
-
-            Rectangle {
-                anchors.fill: parent
-                radius: height / 2
-                color: Appearance.colors.colSurfaceContainerHighest ?? Appearance.colors.colSurfaceVariant
-            }
-
-            Rectangle {
-                width: Math.max(parent.width * Math.max(Math.min(Battery.percentage, 1), Battery.percentage > 0 ? 0.05 : 0), height)
-                height: parent.height
-                radius: height / 2
-                color: Appearance.colors.colPrimary
-                opacity: 0.9
-            }
+            value: Battery.percentage
+            valueBarHeight: 5
+            wavy: true
+            highlightColor: Appearance.colors.colPrimary
+            trackColor: Appearance.colors.colSurfaceContainerHighest ?? Appearance.colors.colSurfaceVariant
         }
 
         // === DIVIDER ===

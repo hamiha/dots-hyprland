@@ -88,27 +88,14 @@ StyledPopup {
             }
         }
 
-        Item {
+        StyledProgressBar {
             Layout.fillWidth: true
-            height: 5
-
-            Rectangle {
-                anchors.fill: parent
-                radius: height / 2
-                color: Appearance.colors.colSurfaceContainerHighest ?? Appearance.colors.colSurfaceVariant
-            }
-
-            Rectangle {
-                id: memFillBar
-                width: Math.max(parent.width * pct, height)
-                height: parent.height
-                radius: height / 2
-                color: Appearance.colors.colPrimary
-                opacity: 0.9
-
-                property real pct: Math.max(Math.min(memCard.pct, 1), memCard.pct > 0 ? 0.05 : 0)
-            }
-
+            value: memCard.pct
+            valueBarHeight: 5
+            wavy: true
+            waveAmplitudeMultiplier: 0.45
+            highlightColor: Appearance.colors.colPrimary
+            trackColor: Appearance.colors.colSurfaceContainerHighest ?? Appearance.colors.colSurfaceVariant
         }
     }
 
@@ -181,27 +168,14 @@ StyledPopup {
 
         Item { implicitHeight: 8 }
 
-        Item {
+        StyledProgressBar {
             Layout.fillWidth: true
-            height: 5
-
-            Rectangle {
-                anchors.fill: parent
-                radius: height / 2
-                color: Appearance.colors.colSurfaceContainerHighest ?? Appearance.colors.colSurfaceVariant
-            }
-
-            Rectangle {
-                id: cpuFillBar
-                width: Math.max(parent.width * pct, height)
-                height: parent.height
-                radius: height / 2
-                color: Appearance.colors.colPrimary
-                opacity: 0.9
-
-                property real pct: Math.max(Math.min(ResourceUsage.cpuUsage, 1), ResourceUsage.cpuUsage > 0 ? 0.05 : 0)
-            }
-
+            value: ResourceUsage.cpuUsage
+            valueBarHeight: 5
+            wavy: true
+            waveAmplitudeMultiplier: 0.45
+            highlightColor: Appearance.colors.colPrimary
+            trackColor: Appearance.colors.colSurfaceContainerHighest ?? Appearance.colors.colSurfaceVariant
         }
 
         // CPU → RAM divider
