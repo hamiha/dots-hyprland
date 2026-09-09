@@ -145,7 +145,7 @@ Scope {
                             right: undefined
                         }
                         width: Appearance.rounding.screenRounding
-                        active: showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
+                        active: height > 0 && showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
 
                         states: State {
                             name: "right"

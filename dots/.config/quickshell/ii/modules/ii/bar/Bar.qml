@@ -155,7 +155,7 @@ Scope {
                             bottom: undefined
                         }
                         height: Appearance.rounding.screenRounding
-                        active: showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
+                        active: width > 0 && showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
 
                         states: State {
                             name: "bottom"
