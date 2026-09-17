@@ -46,28 +46,100 @@ Singleton {
 
     // Internals
 
+    property bool clientsDirty: false
+    property bool monitorsDirty: false
+    property bool layersDirty: false
+    property bool workspacesDirty: false
+    property bool activeWorkspaceDirty: false
+
+    readonly property list<string> clientWorkspaceEvents: [
+        "openwindow", "closewindow", "kill", "movewindow", "movewindowv2"
+    ]
+    // ponytail: Unused workspace metadata like hasfullscreen/lastwindow may lag; refresh it if UI starts consuming it.
+    readonly property list<string> clientEvents: [
+        "activewindow", "activewindowv2", "fullscreen", "windowtitle", "windowtitlev2",
+        "changefloatingmode", "urgent", "togglegroup", "moveintogroup", "moveoutofgroup", "pin", "minimized"
+    ]
+    readonly property list<string> activeWorkspaceEvents: [
+        "workspace", "workspacev2", "focusedmon", "focusedmonv2"
+    ]
+    readonly property list<string> workspaceEvents: [
+        "createworkspace", "createworkspacev2", "destroyworkspace", "destroyworkspacev2",
+        "moveworkspace", "moveworkspacev2", "renameworkspace", "activespecial", "activespecialv2"
+    ]
+    readonly property list<string> monitorEvents: [
+        "monitoradded", "monitoraddedv2", "monitorremoved", "monitorremovedv2"
+    ]
+    readonly property list<string> ignoredEvents: [
+        "activelayout", "submap", "screencast", "screencastv2",
+        "ignoregrouplock", "lockgroups", "bell"
+    ]
+
+    function flushUpdates() {
+        if (clientsDirty && !getClients.running) {
+            clientsDirty = false;
+            getClients.running = true;
+        }
+        if (monitorsDirty && !getMonitors.running) {
+            monitorsDirty = false;
+            getMonitors.running = true;
+        }
+        if (layersDirty && !getLayers.running) {
+            layersDirty = false;
+            getLayers.running = true;
+        }
+        if (workspacesDirty && !getWorkspaces.running) {
+            workspacesDirty = false;
+            getWorkspaces.running = true;
+        }
+        if (activeWorkspaceDirty && !getActiveWorkspace.running) {
+            activeWorkspaceDirty = false;
+            getActiveWorkspace.running = true;
+        }
+    }
+
+    function scheduleFlush() {
+        if ((clientsDirty || monitorsDirty || layersDirty || workspacesDirty || activeWorkspaceDirty)
+                && !updateTimer.running) updateTimer.start();
+    }
+
+    function queueUpdates(updates) {
+        clientsDirty = clientsDirty || !!updates.clients;
+        monitorsDirty = monitorsDirty || !!updates.monitors;
+        layersDirty = layersDirty || !!updates.layers;
+        workspacesDirty = workspacesDirty || !!updates.workspaces;
+        activeWorkspaceDirty = activeWorkspaceDirty || !!updates.activeWorkspace;
+        scheduleFlush();
+    }
+
     function updateWindowList() {
-        getClients.running = true;
+        clientsDirty = true;
+        flushUpdates();
     }
 
     function updateLayers() {
-        getLayers.running = true;
+        layersDirty = true;
+        flushUpdates();
     }
 
     function updateMonitors() {
-        getMonitors.running = true;
+        monitorsDirty = true;
+        flushUpdates();
     }
 
     function updateWorkspaces() {
-        getWorkspaces.running = true;
-        getActiveWorkspace.running = true;
+        workspacesDirty = true;
+        activeWorkspaceDirty = true;
+        flushUpdates();
     }
 
     function updateAll() {
-        updateWindowList();
-        updateMonitors();
-        updateLayers();
-        updateWorkspaces();
+        clientsDirty = true;
+        monitorsDirty = true;
+        layersDirty = true;
+        workspacesDirty = true;
+        activeWorkspaceDirty = true;
+        flushUpdates();
     }
 
     function biggestWindowForWorkspace(workspaceId) {
@@ -83,19 +155,43 @@ Singleton {
         updateAll();
     }
 
+    Timer {
+        id: updateTimer
+        interval: 50
+        onTriggered: root.flushUpdates()
+    }
+
     Connections {
         target: Hyprland
 
         function onRawEvent(event) {
-            // console.log("Hyprland raw event:", event.name);
-            if (["openlayer", "closelayer", "screencast"].includes(event.name)) return;
-            updateAll()
+            const name = event.name;
+
+            if (root.clientWorkspaceEvents.includes(name)) {
+                root.queueUpdates({ clients: true, workspaces: true });
+            } else if (root.clientEvents.includes(name)) {
+                root.queueUpdates({ clients: true });
+            } else if (root.activeWorkspaceEvents.includes(name)) {
+                root.queueUpdates({ monitors: true, activeWorkspace: true });
+            } else if (root.workspaceEvents.includes(name)) {
+                root.queueUpdates({ monitors: true, workspaces: true, activeWorkspace: true });
+            } else if (root.monitorEvents.includes(name) || name === "configreloaded") {
+                root.queueUpdates({ clients: true, monitors: true, layers: true, workspaces: true, activeWorkspace: true });
+            } else if (name === "openlayer" || name === "closelayer") {
+                root.queueUpdates({ layers: true });
+            } else if (!root.ignoredEvents.includes(name)) {
+                // Preserve correctness for new Hyprland events until they are classified.
+                root.queueUpdates({ clients: true, monitors: true, layers: true, workspaces: true, activeWorkspace: true });
+            }
         }
     }
 
     Process {
         id: getClients
         command: ["hyprctl", "clients", "-j"]
+        onRunningChanged: {
+            if (!running) root.scheduleFlush();
+        }
         stdout: StdioCollector {
             id: clientsCollector
             onStreamFinished: {
@@ -114,6 +210,9 @@ Singleton {
     Process {
         id: getMonitors
         command: ["hyprctl", "monitors", "-j"]
+        onRunningChanged: {
+            if (!running) root.scheduleFlush();
+        }
         stdout: StdioCollector {
             id: monitorsCollector
             onStreamFinished: {
@@ -125,6 +224,9 @@ Singleton {
     Process {
         id: getLayers
         command: ["hyprctl", "layers", "-j"]
+        onRunningChanged: {
+            if (!running) root.scheduleFlush();
+        }
         stdout: StdioCollector {
             id: layersCollector
             onStreamFinished: {
@@ -136,6 +238,9 @@ Singleton {
     Process {
         id: getWorkspaces
         command: ["hyprctl", "workspaces", "-j"]
+        onRunningChanged: {
+            if (!running) root.scheduleFlush();
+        }
         stdout: StdioCollector {
             id: workspacesCollector
             onStreamFinished: {
@@ -156,6 +261,9 @@ Singleton {
     Process {
         id: getActiveWorkspace
         command: ["hyprctl", "activeworkspace", "-j"]
+        onRunningChanged: {
+            if (!running) root.scheduleFlush();
+        }
         stdout: StdioCollector {
             id: activeWorkspaceCollector
             onStreamFinished: {

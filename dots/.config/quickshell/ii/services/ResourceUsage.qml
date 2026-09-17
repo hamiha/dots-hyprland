@@ -72,16 +72,16 @@ Singleton {
     }
 
     Timer {
-        interval: 1
+        interval: Config.options?.resources?.updateInterval ?? 3000
         running: true
         repeat: true
+        triggeredOnStart: true
 
         onTriggered: {
             // Reload files
             fileMeminfo.reload()
             fileStat.reload()
             fileCpuTemp.reload()
-            dfProc.running = true
 
             // Parse memory and swap usage
             const textMeminfo = fileMeminfo.text()
@@ -125,8 +125,16 @@ Singleton {
                 : rawCpuTemp
 
             root.updateHistories()
+        }
+    }
 
-            interval = Config.options?.resources?.updateInterval ?? 3000
+    Timer {
+        interval: 60000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: {
+            if (!dfProc.running) dfProc.running = true;
         }
     }
 
