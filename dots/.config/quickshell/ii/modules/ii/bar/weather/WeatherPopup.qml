@@ -59,7 +59,7 @@ StyledPopup {
                     StyledText {
                         text: Weather.data.temp
                         font {
-                            weight: Font.SemiBold
+                            weight: Font.DemiBold
                             pixelSize: Appearance.font.pixelSize.small * 2
                         }
                         color: Appearance.colors.colOnSurface

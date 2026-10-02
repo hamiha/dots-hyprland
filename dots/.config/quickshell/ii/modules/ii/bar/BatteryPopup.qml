@@ -78,7 +78,7 @@ StyledPopup {
             Layout.topMargin: 8
             text: `${Math.round(Battery.percentage * 100)}%`
             font {
-                weight: Font.SemiBold
+                weight: Font.DemiBold
                 pixelSize: Appearance.font.pixelSize.small * 2
             }
             color: Appearance.colors.colOnSurface
