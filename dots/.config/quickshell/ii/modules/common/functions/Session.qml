@@ -21,7 +21,7 @@ Singleton {
     }
 
     function suspend() {
-        Quickshell.execDetached(["bash", "-c", "systemctl suspend || loginctl suspend"]);
+        Quickshell.execDetached(["/usr/local/bin/smart-sleep"]);
     }
 
     function logout() {
