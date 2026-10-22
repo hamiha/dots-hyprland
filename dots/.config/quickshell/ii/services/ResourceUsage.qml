@@ -81,7 +81,7 @@ Singleton {
             // Reload files
             fileMeminfo.reload()
             fileStat.reload()
-            fileCpuTemp.reload()
+            if (fileCpuTemp.path.length > 0) fileCpuTemp.reload()
 
             // Parse memory and swap usage
             const textMeminfo = fileMeminfo.text()
@@ -150,7 +150,21 @@ Singleton {
 
     FileView {
         id: fileCpuTemp
-        path: "/sys/class/thermal/thermal_zone12/temp"
+        path: ""
+    }
+
+    Process {
+        running: true
+        command: [
+            "bash", "-c",
+            "for zone in /sys/class/thermal/thermal_zone*; do [ -r \"$zone/type\" ] || continue; read -r type < \"$zone/type\"; if [ \"$type\" = x86_pkg_temp ]; then printf '%s/temp\\n' \"$zone\"; break; fi; done"
+        ]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                fileCpuTemp.path = text.trim()
+                if (!fileCpuTemp.path) console.warn("[ResourceUsage] CPU temperature sensor not found")
+            }
+        }
     }
 
     Process {

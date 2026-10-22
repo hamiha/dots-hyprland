@@ -30,8 +30,8 @@ Toolbar {
             {"icon": "gesture", "name": Translation.tr("Circle")}
         ]
         currentIndex: root.selectionMode === RegionSelection.SelectionMode.RectCorners ? 0 : 1
-        onCurrentIndexChanged: {
-            root.selectionMode = currentIndex === 0 ? RegionSelection.SelectionMode.RectCorners : RegionSelection.SelectionMode.Circle;
+        onActivated: index => {
+            root.selectionMode = index === 0 ? RegionSelection.SelectionMode.RectCorners : RegionSelection.SelectionMode.Circle;
         }
     }
 }

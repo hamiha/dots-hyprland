@@ -10,15 +10,19 @@ Item {
     id: root
     property alias currentIndex: tabBar.currentIndex
     required property var tabButtonList
+    signal activated(index: int)
 
     function incrementCurrentIndex() {
         tabBar.incrementCurrentIndex();
+        root.activated(tabBar.currentIndex);
     }
     function decrementCurrentIndex() {
         tabBar.decrementCurrentIndex();
+        root.activated(tabBar.currentIndex);
     }
     function setCurrentIndex(index) {
         tabBar.setCurrentIndex(index);
+        root.activated(tabBar.currentIndex);
     }
 
     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter

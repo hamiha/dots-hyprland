@@ -35,6 +35,12 @@ Singleton {
         property string urgency: notification?.urgency.toString() ?? "normal"
         property Timer timer
 
+        function clearTimer() {
+            timer?.stop();
+            timer?.destroy();
+            timer = null;
+        }
+
         onNotificationChanged: {
             if (notification === null) {
                 root.discardNotification(notificationId);
@@ -66,10 +72,13 @@ Singleton {
         onTriggered: () => {
             const index = root.list.findIndex((notif) => notif.notificationId === notificationId);
             const notifObject = root.list[index];
-            print("[Notifications] Notification timer triggered for ID: " + notificationId + ", transient: " + notifObject?.isTransient);
+            if (!notifObject) {
+                destroy();
+                return;
+            }
+            print("[Notifications] Notification timer triggered for ID: " + notificationId + ", transient: " + notifObject.isTransient);
             if (notifObject.isTransient) root.discardNotification(notificationId);
             else root.timeoutNotification(notificationId);
-            destroy()
         }
     }
 
@@ -194,6 +203,7 @@ Singleton {
         const index = root.list.findIndex((notif) => notif.notificationId === id);
         const notifServerIndex = notifServer.trackedNotifications.values.findIndex((notif) => notif.id + root.idOffset === id);
         if (index !== -1) {
+            root.list[index].clearTimer();
             root.list.splice(index, 1);
             notifFileView.setText(stringifyList(root.list));
             triggerListChange()
@@ -205,6 +215,7 @@ Singleton {
     }
 
     function discardAllNotifications() {
+        root.list.forEach((notif) => notif.clearTimer());
         root.list = []
         triggerListChange()
         notifFileView.setText(stringifyList(root.list));
@@ -216,23 +227,21 @@ Singleton {
 
     function cancelTimeout(id) {
         const index = root.list.findIndex((notif) => notif.notificationId === id);
-        if (root.list[index] != null)
-            root.list[index].timer.stop();
+        root.list[index]?.timer?.stop();
     }
 
     function timeoutNotification(id) {
         const index = root.list.findIndex((notif) => notif.notificationId === id);
-        if (root.list[index] != null)
+        if (root.list[index] != null) {
+            root.list[index].clearTimer();
             root.list[index].popup = false;
+        }
         root.timeout(id);
     }
 
     function timeoutAll() {
         root.popupList.forEach((notif) => {
-            root.timeout(notif.notificationId);
-        })
-        root.popupList.forEach((notif) => {
-            notif.popup = false;
+            root.timeoutNotification(notif.notificationId);
         });
     }
 

@@ -119,25 +119,15 @@ Singleton {
     }
 
     function getData() {
-        let command = "curl -s wttr.in";
-
-        if (root.gpsActive && root.location.valid) {
-            command += `/${root.location.lat},${root.location.long}`;
-        } else {
-            command += `/${formatCityName(root.city)}`;
-        }
-
-        // format as json
-        command += "?format=j1";
-        command += " | ";
-        // only take the current weather, location, asytronmy data
-        command += "jq '{current: .current_condition[0], location: .nearest_area[0], astronomy: .weather[0].astronomy[0]}'";
-        fetcher.command[2] = command;
+        const location = root.gpsActive && root.location.valid
+            ? `${root.location.lat},${root.location.lon}`
+            : root.city.trim();
+        fetcher.command = [
+            "curl", "--fail", "--silent", "--show-error", "--globoff",
+            "--connect-timeout", "10", "--max-time", "20",
+            `https://wttr.in/${encodeURIComponent(location)}?format=j1`
+        ];
         fetcher.running = true;
-    }
-
-    function formatCityName(cityName) {
-        return cityName.trim().split(/\s+/).join('+');
     }
 
     Component.onCompleted: {
@@ -148,18 +138,22 @@ Singleton {
 
     Process {
         id: fetcher
-        command: ["bash", "-c", ""]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (text.length === 0)
-                    return;
-                try {
-                    const parsedData = JSON.parse(text);
-                    root.refineData(parsedData);
-                    // console.info(`[ data: ${JSON.stringify(parsedData)}`);
-                } catch (e) {
-                    console.error(`[WeatherService] ${e.message}`);
-                }
+        stdout: StdioCollector { id: weatherOutput }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0 || exitStatus !== 0) {
+                console.error(`[WeatherService] Fetch failed (exit ${exitCode}, status ${exitStatus})`);
+                return;
+            }
+            try {
+                const parsedData = JSON.parse(weatherOutput.text);
+                const current = parsedData?.current_condition?.[0];
+                const location = parsedData?.nearest_area?.[0];
+                const astronomy = parsedData?.weather?.[0]?.astronomy?.[0];
+                if (!current || !location || !astronomy)
+                    throw new Error("Incomplete weather response");
+                root.refineData({ current, location, astronomy });
+            } catch (e) {
+                console.error(`[WeatherService] ${e.message}`);
             }
         }
     }
@@ -173,7 +167,7 @@ Singleton {
             // if it fails getting the location, use the last valid location
             if (position.latitudeValid && position.longitudeValid) {
                 root.location.lat = position.coordinate.latitude;
-                root.location.long = position.coordinate.longitude;
+                root.location.lon = position.coordinate.longitude;
                 root.location.valid = true;
                 // console.info(`📍 Location: ${position.coordinate.latitude}, ${position.coordinate.longitude}`);
                 root.getData();
