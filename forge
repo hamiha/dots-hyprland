@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# forge - Reforge the shell from the sealed Runeforge branch
+# forge - Install the main branch or rebuild only the Quickshell package.
 # Modes:
-#   all         - Full system reforging ritual
-#   quickshell  - Reforge Quickshell and awaken sealed shell state
+#   all         - Full setup (default)
+#   quickshell  - Clean package rebuild; preserve live settings
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")"
-BRANCH="runeforge"
-QS_CONFIG="ii"
-QS_LIVE="$HOME/.config/quickshell"
-QS_REPO="$REPO_ROOT/dots/.config/quickshell"
+BRANCH="main"
 QS_PKGBUILD="$REPO_ROOT/sdata/dist-arch/illogical-impulse-quickshell-git"
 
 # Fork-specific packages (not in upstream)
@@ -19,7 +16,7 @@ FORK_PACKAGES=(
   awww
 )
 
-MODE=""
+MODE="all"
 NO_PULL=false
 
 RED='\033[0;31m'
@@ -33,14 +30,15 @@ usage() {
 Usage: $(basename "$0") [MODE] [OPTIONS]
 
 Rituals:
-  all           Full system reforging ritual
-  quickshell    Reforge Quickshell + awaken sealed shell state
+  all           Run full setup from main (default; installs configs)
+  quickshell    Clean package rebuild only; preserve live settings
 
 Options:
   --no-pull     Skip drawing latest runes from origin
   -h, --help    Show this help
 
 Examples:
+  $(basename "$0")
   $(basename "$0") all
   $(basename "$0") quickshell
   $(basename "$0") quickshell --no-pull
@@ -63,7 +61,7 @@ ensure_branch() {
 pull_latest() {
   if $NO_PULL; then return 0; fi
   log "Drawing latest runes from origin..."
-  git -C "$REPO_ROOT" pull origin "$BRANCH" || warn "Rune retrieval failed — proceeding with local branch"
+  git -C "$REPO_ROOT" pull --ff-only origin "$BRANCH" || warn "Rune retrieval failed — proceeding with local branch"
 }
 
 init_submodules() {
@@ -95,53 +93,11 @@ rebuild_quickshell() {
     warn "Dependency familiar 'yay' was not found. Install build deps manually if needed."
   fi
 
-  makepkg -Afsi --noconfirm
+  makepkg -Cfsi --noconfirm
 
   popd >/dev/null
-  info "Quickshell has been successfully reforged"
-}
-
-backup_quickshell() {
-  if [[ ! -d "$QS_LIVE" ]]; then return 0; fi
-
-  local backup_dir="$HOME/.config/quickshell.backup.$(date +%F-%H%M%S)"
-
-  log "Preserving current shell state..."
-  info "$QS_LIVE → $backup_dir"
-
-  cp -a "$QS_LIVE" "$backup_dir"
-}
-
-sync_quickshell() {
-  if [[ ! -d "$QS_REPO" ]]; then
-    warn "No sealed Quickshell state was found:"
-    warn "$QS_REPO"
-    exit 1
-  fi
-
-  log "Awakening sealed shell state..."
-
-  mkdir -p "$QS_LIVE"
-
-  rsync -a --delete \
-    --exclude='.git' \
-    --exclude='.gitmodules' \
-    "$QS_REPO/" \
-    "$QS_LIVE/"
-
-  info "Live shell state awakened at $QS_LIVE"
-}
-
-restart_quickshell() {
-  log "Reigniting Quickshell..."
-
-  killall qs quickshell 2>/dev/null || true
-  sleep 0.5
-
-  qs -c "$QS_CONFIG" &
-  disown
-
-  info "The shell has awakened"
+  quickshell --private-check-compat
+  info "Quickshell has been successfully reforged. Restart it when ready."
 }
 
 while [[ $# -gt 0 ]]; do
@@ -166,40 +122,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$MODE" ]]; then
-  echo ""
-  printf "${BOLD}Choose a forging ritual:${RST}\n"
-  echo "  1) all          - Full system reforging ritual"
-  echo "  2) quickshell   - Reforge and awaken Quickshell"
-  echo ""
-  printf "${CYAN}:: ${RST}Select ritual [1/2]: "
-
-  read -r choice
-
-  case "$choice" in
-  1 | all)
-    MODE="all"
-    ;;
-  2 | quickshell | qs)
-    MODE="quickshell"
-    ;;
-  *)
-    warn "Invalid ritual"
-    exit 1
-    ;;
-  esac
-fi
-
 log "Invoked ritual: $MODE"
 info "Archive: $REPO_ROOT"
 info "Branch:  $BRANCH"
 
 ensure_branch
 pull_latest
-init_submodules
 
 case "$MODE" in
 all)
+  init_submodules
   log "Beginning full system reforging..."
   cd "$REPO_ROOT"
   ./setup install
@@ -210,9 +142,6 @@ all)
   ;;
 quickshell)
   rebuild_quickshell
-  backup_quickshell
-  sync_quickshell
-  restart_quickshell
   ;;
 esac
 

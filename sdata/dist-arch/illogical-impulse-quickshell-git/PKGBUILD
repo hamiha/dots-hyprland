@@ -8,7 +8,7 @@ _prefix='illogical-impulse'
 _pkgname=quickshell
 pkgname="$_prefix-$_pkgname-git"
 pkgver=0.1.0.r1
-pkgrel=8
+pkgrel=9
 pkgdesc="$_pkgname-git pinned commit and extra deps for $_prefix"
 arch=(x86_64 aarch64)
 url='https://git.outfoxxed.me/quickshell/quickshell'
@@ -58,9 +58,16 @@ conflicts=("$_pkgname" "$_pkgname-git")
 
 _pkgsrc="$_pkgname"
 source=("$_pkgsrc::git+$url.git#commit=$_commit"
-  quickshell-check.hook)
+  quickshell-check.hook
+  qt6-metatype.patch)
 sha256sums=('SKIP'
-  '8543e21aeaaa5441b73a679160e7601a957f16c433e8d6bd9257e80bd0e94083')
+  '8543e21aeaaa5441b73a679160e7601a957f16c433e8d6bd9257e80bd0e94083'
+  '066185558ca2e4aa1ff9d37616cffe80f379e3a199e91fe3623eef03b23df47c')
+
+prepare() {
+  # Qt needs complete QObject types when generating metadata.
+  patch -d "$_pkgname" -Np1 -i "$srcdir/qt6-metatype.patch"
+}
 
 build() {
   cd "$_pkgname"

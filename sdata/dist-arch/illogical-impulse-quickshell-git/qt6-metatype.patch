@@ -1,0 +1,27 @@
+--- a/src/services/pipewire/peak.hpp
++++ b/src/services/pipewire/peak.hpp
+@@ -19 +19,2 @@
+-Q_DECLARE_OPAQUE_POINTER(qs::service::pipewire::PwNodeIface*);
++Q_DECLARE_OPAQUE_POINTER(qs::service::pipewire::PwNodeIface*);
++Q_MOC_INCLUDE("qml.hpp");
+--- a/src/wayland/hyprland/ipc/connection.hpp
++++ b/src/wayland/hyprland/ipc/connection.hpp
+@@ -28,3 +28,6 @@
+-Q_DECLARE_OPAQUE_POINTER(qs::hyprland::ipc::HyprlandWorkspace*);
+-Q_DECLARE_OPAQUE_POINTER(qs::hyprland::ipc::HyprlandMonitor*);
+-Q_DECLARE_OPAQUE_POINTER(qs::hyprland::ipc::HyprlandToplevel*);
++Q_DECLARE_OPAQUE_POINTER(qs::hyprland::ipc::HyprlandWorkspace*);
++Q_DECLARE_OPAQUE_POINTER(qs::hyprland::ipc::HyprlandMonitor*);
++Q_DECLARE_OPAQUE_POINTER(qs::hyprland::ipc::HyprlandToplevel*);
++Q_MOC_INCLUDE("workspace.hpp");
++Q_MOC_INCLUDE("monitor.hpp");
++Q_MOC_INCLUDE("hyprland_toplevel.hpp");
+--- a/src/x11/i3/ipc/controller.hpp
++++ b/src/x11/i3/ipc/controller.hpp
+@@ -23,2 +23,4 @@
+-Q_DECLARE_OPAQUE_POINTER(qs::i3::ipc::I3Workspace*);
+-Q_DECLARE_OPAQUE_POINTER(qs::i3::ipc::I3Monitor*);
++Q_DECLARE_OPAQUE_POINTER(qs::i3::ipc::I3Workspace*);
++Q_DECLARE_OPAQUE_POINTER(qs::i3::ipc::I3Monitor*);
++Q_MOC_INCLUDE("workspace.hpp");
++Q_MOC_INCLUDE("monitor.hpp");
