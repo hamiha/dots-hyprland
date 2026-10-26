@@ -144,7 +144,7 @@ EOF
 set_wallpaper_path() {
   local path="$1"
   if [ -f "$SHELL_CONFIG_FILE" ]; then
-    jq --arg path "$path" '.background.wallpaperPath = $path' "$SHELL_CONFIG_FILE" >"$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
+    jq --arg path "$path" '.background.wallpaperPath = $path | .background.wallpaperPaths = {}' "$SHELL_CONFIG_FILE" >"$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
     "$XDG_CONFIG_HOME/hypr/custom/scripts/sync-lock-wallpaper.sh" &
   fi
 }
@@ -187,6 +187,14 @@ switch() {
   if [[ "$color_flag" == "1" ]]; then
     matugen_args+=(color hex "$color")
     generate_colors_material_args=(--color "$color")
+  elif [[ -n "$noswitch_flag" ]]; then
+    [[ -n "$imgpath" ]] || return 0
+    local theme_image="$imgpath"
+    if is_video "$imgpath"; then
+      theme_image=$(jq -r '.background.thumbnailPath' "$SHELL_CONFIG_FILE")
+    fi
+    matugen_args+=(image "$theme_image")
+    generate_colors_material_args=(--path "$theme_image")
   else
     if [[ -z "$imgpath" ]]; then
       echo 'Aborted'
@@ -254,14 +262,13 @@ switch() {
     else
       matugen_args+=(image "$imgpath")
       generate_colors_material_args=(--path "$imgpath")
-      # Update wallpaper path in config
+      command -v awww &>/dev/null || { echo "Missing wallpaper renderer: awww" >&2; return 1; }
+      awww img "$imgpath" \
+        --transition-type random \
+        --transition-duration 2 \
+        --transition-fps 60 || return 1
       set_wallpaper_path "$imgpath"
-      if command -v awww &>/dev/null; then
-        awww img "$imgpath" \
-          --transition-type random \
-          --transition-duration 2 \
-          --transition-fps 60 &
-      fi
+      set_accent_color ""
       remove_restore
     fi
   fi
@@ -323,7 +330,69 @@ switch() {
   post_process "$max_width_desired" "$max_height_desired" "$imgpath"
 }
 
+# Static per-output changes deliberately bypass global theme/video/lock state.
+switch_monitor() (
+  local monitor="" image="" monitors mime temporary
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --monitor|--image|--mode)
+      [[ $# -ge 2 && -n "$2" ]] || { echo "Missing value for $1" >&2; return 1; }
+      case "$1" in
+      --monitor) monitor="$2" ;;
+      --image) image="$2" ;;
+      esac
+      shift 2
+      ;;
+    --*) echo "Unsupported monitor wallpaper option: $1" >&2; return 1 ;;
+    *)
+      [[ -z "$image" ]] || { echo "Unexpected wallpaper argument: $1" >&2; return 1; }
+      image="$1"
+      shift
+      ;;
+    esac
+  done
+  [[ -n "$monitor" ]] || { echo "No target monitor" >&2; return 1; }
+  monitors=$(hyprctl monitors -j) || return 1
+  jq -e --arg monitor "$monitor" 'any(.[]; .name == $monitor)' <<<"$monitors" >/dev/null || {
+    echo "Unknown target monitor: $monitor" >&2; return 1;
+  }
+  if [[ -z "$image" ]]; then
+    cd "$(xdg-user-dir PICTURES)" || return 1
+    image=$(kdialog --getopenfilename . --title "Choose wallpaper · $monitor") || return 1
+    [[ -n "$image" ]] || return 0
+  fi
+  image=$(realpath -e -- "$image") || return 1
+  [[ -f "$image" && -r "$image" ]] || { echo "Wallpaper is not a readable file" >&2; return 1; }
+  mime=$(file -b --mime-type -- "$image") || return 1
+  [[ "$mime" == image/* ]] || { echo "Monitor wallpapers require a static image" >&2; return 1; }
+  if pgrep -x mpvpaper >/dev/null; then
+    echo "Global video wallpaper is active. Switch to a global static wallpaper before setting monitor wallpapers." >&2
+    return 1
+  fi
+
+  # Serialize monitor writers; read current JSON only after rendering succeeds.
+  exec 9>"$SHELL_CONFIG_FILE.lock" || return 1
+  flock -x 9 || return 1
+  jq -e 'type == "object" and (.background | type == "object")' "$SHELL_CONFIG_FILE" >/dev/null || return 1
+  local args=(img "$image" --outputs "$monitor" --transition-type random --transition-duration 2 --transition-fps 60)
+  awww "${args[@]}" || return 1
+  temporary=$(mktemp "$SHELL_CONFIG_FILE.XXXXXX") || return 1
+  trap 'rm -f -- "$temporary"' EXIT
+  jq --arg monitor "$monitor" --arg path "$image" '
+    .background.wallpaperPaths |= (if type == "object" then . else {} end) |
+    .background.wallpaperPaths[$monitor] = $path
+  ' "$SHELL_CONFIG_FILE" >"$temporary" || return 1
+  mv -- "$temporary" "$SHELL_CONFIG_FILE" || return 1
+)
+
 main() {
+  local argument
+  for argument in "$@"; do
+    if [[ "$argument" == "--monitor" ]]; then
+      switch_monitor "$@"
+      return $?
+    fi
+  done
   imgpath=""
   mode_flag=""
   type_flag=""
@@ -422,7 +491,9 @@ main() {
   fi
 
   if [[ -n "$imgpath" && -z "$noswitch_flag" ]]; then
-    set_accent_color ""
+    if is_video "$imgpath"; then
+      set_accent_color ""
+    fi
     color_flag=""
     color=""
   fi

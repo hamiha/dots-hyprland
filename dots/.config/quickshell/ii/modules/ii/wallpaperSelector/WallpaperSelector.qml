@@ -13,14 +13,33 @@ import Quickshell.Hyprland
 Scope {
     id: root
 
+    property string targetMonitorName: ""
+    property var targetScreen: null
+
+    function captureTarget() {
+        root.targetMonitorName = Wallpapers.focusedMonitorName();
+        root.targetScreen = Quickshell.screens.find(screen => screen.name === root.targetMonitorName) ?? null;
+        if (!root.targetScreen) GlobalStates.wallpaperSelectorOpen = false;
+    }
+
+    Connections {
+        target: GlobalStates
+        function onWallpaperSelectorOpenChanged() {
+            if (GlobalStates.wallpaperSelectorOpen) root.captureTarget();
+            else root.targetScreen = null;
+        }
+    }
+    Component.onCompleted: {
+        if (GlobalStates.wallpaperSelectorOpen) root.captureTarget();
+    }
+
     Loader {
         id: wallpaperSelectorLoader
-        active: GlobalStates.wallpaperSelectorOpen
+        active: GlobalStates.wallpaperSelectorOpen && root.targetScreen !== null
 
         sourceComponent: PanelWindow {
             id: panelWindow
-            readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
-            property bool monitorIsFocused: (Hyprland.focusedMonitor?.id == monitor?.id)
+            screen: root.targetScreen
 
             exclusionMode: ExclusionMode.Ignore
             WlrLayershell.namespace: "quickshell:wallpaperSelector"
@@ -55,6 +74,7 @@ Scope {
 
             WallpaperSelectorContent {
                 id: content
+                targetMonitorName: root.targetMonitorName
                 anchors {
                     fill: parent
                 }
@@ -64,7 +84,7 @@ Scope {
 
     function toggleWallpaperSelector() {
         if (Config.options.wallpaperSelector.useSystemFileDialog) {
-            Wallpapers.openFallbackPicker(Appearance.m3colors.darkmode);
+            Wallpapers.openFallbackPicker(Appearance.m3colors.darkmode, Wallpapers.focusedMonitorName());
             return;
         }
         GlobalStates.wallpaperSelectorOpen = !GlobalStates.wallpaperSelectorOpen
@@ -78,7 +98,7 @@ Scope {
         }
 
         function random(): void {
-            Wallpapers.randomFromCurrentFolder();
+            Wallpapers.randomFromCurrentFolder(Appearance.m3colors.darkmode, GlobalStates.wallpaperSelectorOpen ? root.targetMonitorName : Wallpapers.focusedMonitorName());
         }
     }
 
@@ -94,7 +114,7 @@ Scope {
         name: "wallpaperSelectorRandom"
         description: "Select random wallpaper in current folder"
         onPressed: {
-            Wallpapers.randomFromCurrentFolder();
+            Wallpapers.randomFromCurrentFolder(Appearance.m3colors.darkmode, GlobalStates.wallpaperSelectorOpen ? root.targetMonitorName : Wallpapers.focusedMonitorName());
         }
     }
 }

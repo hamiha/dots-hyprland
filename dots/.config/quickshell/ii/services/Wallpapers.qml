@@ -5,6 +5,7 @@ import QtQuick
 import Qt.labs.folderlistmodel
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 pragma Singleton
 pragma ComponentBehavior: Bound
 
@@ -35,44 +36,83 @@ Singleton {
 
     function load () {} // For forcing initialization
     
-    function openFallbackPicker(darkMode = Appearance.m3colors.darkmode) {
-        Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--mode", darkMode ? "dark" : "light"]);
+    function focusedMonitorName() {
+        const name = Hyprland.focusedMonitor?.name;
+        return typeof name === "string" && Quickshell.screens.some(screen => screen.name === name) ? name : "";
     }
 
-    function apply(path, darkMode = Appearance.m3colors.darkmode) {
+    function pathForMonitor(monitorName) {
+        const paths = Config.options.background.wallpaperPaths;
+        const path = paths && typeof paths === "object" && !Array.isArray(paths)
+            && Object.prototype.hasOwnProperty.call(paths, monitorName) ? paths[monitorName] : null;
+        return typeof path === "string" && path.trim().length > 0 ? path : Config.options.background.wallpaperPath;
+    }
+
+    function startApply(args, monitorName) {
+        if (!monitorName || !Quickshell.screens.some(screen => screen.name === monitorName)) {
+            console.error("Wallpaper: no valid target monitor");
+            return;
+        }
+        if (applyProc.running) return;
+        applyProc.exec([Directories.wallpaperSwitchScriptPath, "--monitor", monitorName, ...args]);
+    }
+
+    function openFallbackPicker(darkMode = Appearance.m3colors.darkmode, monitorName = root.focusedMonitorName()) {
+        root.startApply(["--mode", darkMode ? "dark" : "light"], monitorName);
+    }
+
+    function apply(path, darkMode = Appearance.m3colors.darkmode, monitorName = root.focusedMonitorName()) {
         if (!path || path.length === 0) return;
-        Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--mode", darkMode ? "dark" : "light", "--image", path]);
-        root.changed()
+        root.startApply(["--mode", darkMode ? "dark" : "light", "--image", FileUtils.trimFileProtocol(path)], monitorName);
+    }
+
+    Process {
+        id: applyProc
+        stderr: StdioCollector {
+            id: applyErrors
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0 && exitStatus === 0) root.changed();
+            else {
+                const message = applyErrors.text.trim() || "Wallpaper apply failed";
+                console.error(message);
+                Quickshell.execDetached(["notify-send", "Wallpaper", message]);
+            }
+        }
     }
 
     Process {
         id: selectProc
         property string filePath: ""
         property bool darkMode: Appearance.m3colors.darkmode
-        function select(filePath, darkMode = Appearance.m3colors.darkmode) {
-            selectProc.filePath = filePath
-            selectProc.darkMode = darkMode
-            selectProc.exec(["test", "-d", FileUtils.trimFileProtocol(filePath)])
+        property string monitorName: ""
+        function select(filePath, darkMode, monitorName) {
+            // Keep in-flight directory checks pinned to their original request.
+            if (selectProc.running) return;
+            selectProc.filePath = filePath;
+            selectProc.darkMode = darkMode;
+            selectProc.monitorName = monitorName;
+            selectProc.exec(["test", "-d", FileUtils.trimFileProtocol(filePath)]);
         }
         onExited: (exitCode, exitStatus) => {
+            if (exitStatus !== 0) return;
             if (exitCode === 0) {
-                setDirectory(selectProc.filePath);
+                root.setDirectory(selectProc.filePath);
                 return;
             }
-            root.apply(selectProc.filePath, selectProc.darkMode);
+            root.apply(selectProc.filePath, selectProc.darkMode, selectProc.monitorName);
         }
     }
 
-    function select(filePath, darkMode = Appearance.m3colors.darkmode) {
-        selectProc.select(filePath, darkMode);
+    function select(filePath, darkMode = Appearance.m3colors.darkmode, monitorName = root.focusedMonitorName()) {
+        selectProc.select(filePath, darkMode, monitorName);
     }
 
-    function randomFromCurrentFolder(darkMode = Appearance.m3colors.darkmode) {
+    function randomFromCurrentFolder(darkMode = Appearance.m3colors.darkmode, monitorName = root.focusedMonitorName()) {
         if (folderModel.count === 0) return;
         const randomIndex = Math.floor(Math.random() * folderModel.count);
         const filePath = folderModel.get(randomIndex, "filePath");
-        print("Randomly selected wallpaper:", filePath);
-        root.select(filePath, darkMode);
+        root.select(filePath, darkMode, monitorName);
     }
 
     Process {
@@ -83,14 +123,15 @@ Singleton {
             if (/^\/*$/.test(validateDirProc.nicePath)) validateDirProc.nicePath = "/";
             validateDirProc.exec([
                 "bash", "-c",
-                `if [ -d "${validateDirProc.nicePath}" ]; then echo dir; elif [ -f "${validateDirProc.nicePath}" ]; then echo file; else echo invalid; fi`
+                'if [ -d "$1" ]; then echo dir; elif [ -f "$1" ]; then echo file; else echo invalid; fi',
+                "wallpaper-directory", validateDirProc.nicePath
             ])
         }
         stdout: StdioCollector {
             onStreamFinished: {
-                    root.directory = Qt.resolvedUrl(validateDirProc.nicePath)
                 const result = text.trim()
                 if (result === "dir") {
+                    root.directory = Qt.resolvedUrl(validateDirProc.nicePath)
                 } else if (result === "file") {
                     root.directory = Qt.resolvedUrl(FileUtils.parentDirectory(validateDirProc.nicePath))
                 } else {

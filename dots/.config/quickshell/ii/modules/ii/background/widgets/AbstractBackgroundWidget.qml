@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs
+import qs.services
 import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets.widgetCanvas
@@ -49,8 +50,10 @@ AbstractWidget {
         return onNormalBackground ? Appearance.colors.colOnLayer0 : adaptiveColor;
     }
 
-    property bool wallpaperIsVideo: Config.options.background.wallpaperPath.endsWith(".mp4") || Config.options.background.wallpaperPath.endsWith(".webm") || Config.options.background.wallpaperPath.endsWith(".mkv") || Config.options.background.wallpaperPath.endsWith(".avi") || Config.options.background.wallpaperPath.endsWith(".mov")
-    property string wallpaperPath: wallpaperIsVideo ? Config.options.background.thumbnailPath : Config.options.background.wallpaperPath
+    required property string monitorName
+    property string effectiveWallpaperPath: Wallpapers.pathForMonitor(monitorName)
+    property bool wallpaperIsVideo: effectiveWallpaperPath.endsWith(".mp4") || effectiveWallpaperPath.endsWith(".webm") || effectiveWallpaperPath.endsWith(".mkv") || effectiveWallpaperPath.endsWith(".avi") || effectiveWallpaperPath.endsWith(".mov")
+    property string wallpaperPath: wallpaperIsVideo ? Config.options.background.thumbnailPath : effectiveWallpaperPath
     
     onWallpaperPathChanged: refreshPlacementIfNeeded()
     onPlacementStrategyChanged: refreshPlacementIfNeeded()

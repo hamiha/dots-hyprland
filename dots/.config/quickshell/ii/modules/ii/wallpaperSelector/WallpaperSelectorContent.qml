@@ -12,9 +12,10 @@ import Quickshell.Io
 
 MouseArea {
     id: root
+    required property string targetMonitorName
+    readonly property string effectiveWallpaperPath: Wallpapers.pathForMonitor(targetMonitorName)
     property int columns: 4
     property real previewCellAspectRatio: 4 / 3
-    property bool useDarkMode: Appearance.m3colors.darkmode
 
     function updateThumbnails() {
         const totalImageMargin = (Appearance.sizes.wallpaperSelectorItemMargins + Appearance.sizes.wallpaperSelectorItemPadding) * 2;
@@ -42,7 +43,7 @@ MouseArea {
 
     function selectWallpaperPath(filePath) {
         if (filePath && filePath.length > 0) {
-            Wallpapers.select(filePath, root.useDarkMode);
+            Wallpapers.select(filePath, Appearance.m3colors.darkmode, root.targetMonitorName);
             filterField.text = "";
         }
     }
@@ -155,7 +156,7 @@ MouseArea {
                             pixelSize: Appearance.font.pixelSize.normal
                             weight: Font.Medium
                         }
-                        text: Translation.tr("Pick a wallpaper")
+                        text: Translation.tr("Pick a wallpaper") + " · " + root.targetMonitorName
                     }
                     ListView {
                         // Quick dirs
@@ -321,8 +322,8 @@ MouseArea {
                             fileModelData: modelData
                             width: grid.cellWidth
                             height: grid.cellHeight
-                            colBackground: (index === grid?.currentIndex || containsMouse) ? Appearance.colors.colPrimary : (fileModelData.filePath === Config.options.background.wallpaperPath) ? Appearance.colors.colSecondaryContainer : ColorUtils.transparentize(Appearance.colors.colPrimaryContainer)
-                            colText: (index === grid.currentIndex || containsMouse) ? Appearance.colors.colOnPrimary : (fileModelData.filePath === Config.options.background.wallpaperPath) ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer0
+                            colBackground: (index === grid?.currentIndex || containsMouse) ? Appearance.colors.colPrimary : (fileModelData.filePath === root.effectiveWallpaperPath) ? Appearance.colors.colSecondaryContainer : ColorUtils.transparentize(Appearance.colors.colPrimaryContainer)
+                            colText: (index === grid.currentIndex || containsMouse) ? Appearance.colors.colOnPrimary : (fileModelData.filePath === root.effectiveWallpaperPath) ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer0
 
                             onEntered: {
                                 grid.currentIndex = index;
@@ -356,11 +357,11 @@ MouseArea {
                             IconToolbarButton {
                                 implicitWidth: height
                                 onClicked: {
-                                    Wallpapers.openFallbackPicker(root.useDarkMode);
+                                    Wallpapers.openFallbackPicker(Appearance.m3colors.darkmode, root.targetMonitorName);
                                     GlobalStates.wallpaperSelectorOpen = false;
                                 }
                                 altAction: () => {
-                                    Wallpapers.openFallbackPicker(root.useDarkMode);
+                                    Wallpapers.openFallbackPicker(Appearance.m3colors.darkmode, root.targetMonitorName);
                                     GlobalStates.wallpaperSelectorOpen = false;
                                     Config.options.wallpaperSelector.useSystemFileDialog = true;
                                 }
@@ -373,20 +374,11 @@ MouseArea {
                             IconToolbarButton {
                                 implicitWidth: height
                                 onClicked: {
-                                    Wallpapers.randomFromCurrentFolder();
+                                    Wallpapers.randomFromCurrentFolder(Appearance.m3colors.darkmode, root.targetMonitorName);
                                 }
                                 text: "ifl"
                                 StyledToolTip {
                                     text: Translation.tr("Pick random from this folder")
-                                }
-                            }
-
-                            IconToolbarButton {
-                                implicitWidth: height
-                                onClicked: root.useDarkMode = !root.useDarkMode
-                                text: root.useDarkMode ? "dark_mode" : "light_mode"
-                                StyledToolTip {
-                                    text: Translation.tr("Click to toggle light/dark mode\n(applied when wallpaper is chosen)")
                                 }
                             }
 
@@ -438,10 +430,12 @@ MouseArea {
         }
     }
 
+    Component.onCompleted: filterField.forceActiveFocus()
+
     Connections {
         target: GlobalStates
         function onWallpaperSelectorOpenChanged() {
-            if (GlobalStates.wallpaperSelectorOpen && monitorIsFocused) {
+            if (GlobalStates.wallpaperSelectorOpen) {
                 filterField.forceActiveFocus();
             }
         }

@@ -33,8 +33,9 @@ Scope {
 
             property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
 
-            property bool wallpaperIsVideo: Config.options.background.wallpaperPath.endsWith(".mp4") || Config.options.background.wallpaperPath.endsWith(".webm") || Config.options.background.wallpaperPath.endsWith(".mkv") || Config.options.background.wallpaperPath.endsWith(".avi") || Config.options.background.wallpaperPath.endsWith(".mov")
-            property string wallpaperPath: wallpaperIsVideo ? Config.options.background.thumbnailPath : Config.options.background.wallpaperPath
+            property string effectiveWallpaperPath: Wallpapers.pathForMonitor(modelData.name)
+            property bool wallpaperIsVideo: effectiveWallpaperPath.endsWith(".mp4") || effectiveWallpaperPath.endsWith(".webm") || effectiveWallpaperPath.endsWith(".mkv") || effectiveWallpaperPath.endsWith(".avi") || effectiveWallpaperPath.endsWith(".mov")
+            property string wallpaperPath: wallpaperIsVideo ? Config.options.background.thumbnailPath : effectiveWallpaperPath
             property bool wallpaperSafetyTriggered: {
                 const enabled = Config.options.workSafety.enable.wallpaper;
                 const sensitiveWallpaper = (CF.StringUtils.stringListContainsSubstring(wallpaperPath.toLowerCase(), Config.options.workSafety.triggerCondition.fileKeywords));
@@ -83,6 +84,7 @@ Scope {
                 FadeLoader {
                     shown: Config.options.background.widgets.weather.enable
                     sourceComponent: WeatherWidget {
+                        monitorName: bgRoot.modelData.name
                         screenWidth: bgRoot.screen.width
                         screenHeight: bgRoot.screen.height
                         scaledScreenWidth: bgRoot.screen.width
@@ -94,6 +96,7 @@ Scope {
                 FadeLoader {
                     shown: Config.options.background.widgets.clock.enable
                     sourceComponent: ClockWidget {
+                        monitorName: bgRoot.modelData.name
                         screenWidth: bgRoot.screen.width
                         screenHeight: bgRoot.screen.height
                         scaledScreenWidth: bgRoot.screen.width

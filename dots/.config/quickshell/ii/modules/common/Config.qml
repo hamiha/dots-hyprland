@@ -211,6 +211,7 @@ Singleton {
                     }
                 }
                 property string wallpaperPath: ""
+                property var wallpaperPaths: ({})
                 property string thumbnailPath: ""
                 property bool hideWhenFullscreen: true
                 property bool workspaceBlur: true
